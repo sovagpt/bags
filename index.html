@@ -652,6 +652,12 @@
                 const activityData = await activityResponse.json();
 
                 console.log('Backend response:', activityData);
+                console.log('Token data received:', {
+                    tokenName: activityData.tokenName,
+                    tokenAddress: activityData.tokenAddress,
+                    claimAmount: activityData.claimAmount,
+                    usdValue: activityData.usdValue
+                });
 
                 displayResults(cleanUsername, walletAddress, activityData);
 
