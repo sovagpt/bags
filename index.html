@@ -157,15 +157,6 @@
             background: #218838;
         }
 
-        .info {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #495057;
-        }
-
         .wallet-display {
             word-break: break-all;
             background: #f8f9fa;
@@ -193,7 +184,7 @@
         </div>
 
         <div class="api-status">
-            <strong>✅ API Connected:</strong> Using the corrected endpoint from Bags support
+            <strong>✅ API Fixed:</strong> Now using Twitter usernames as confirmed by Bags support
         </div>
 
         <form id="walletForm">
@@ -226,15 +217,18 @@
             e.preventDefault();
             
             const apiKey = document.getElementById('apiKey').value.trim();
-            const twitterUserId = document.getElementById('twitterUserId').value.trim();
+            const twitterUsername = document.getElementById('twitterUsername').value.trim();
             const loadingEl = document.getElementById('loading');
             const resultEl = document.getElementById('result');
             const submitBtn = document.querySelector('button[type="submit"]');
             
-            if (!apiKey || !twitterUserId) {
-                showResult('Please fill in both API key and Twitter User ID', 'error');
+            if (!apiKey || !twitterUsername) {
+                showResult('Please fill in both API key and Twitter username', 'error');
                 return;
             }
+
+            // Remove @ symbol if user included it
+            const cleanUsername = twitterUsername.replace('@', '');
 
             // Show loading
             loadingEl.style.display = 'block';
@@ -244,7 +238,7 @@
             try {
                 console.log(`Twitter Username: ${cleanUsername}`);
                 
-                // Use the corrected parameter: twitterUsername instead of twitterUserId
+                // CORRECTED: Use twitterUsername parameter as confirmed by Bags support
                 const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(cleanUsername)}`;
                 
                 console.log(`Making request to: ${url}`);
@@ -319,16 +313,13 @@
             });
         }
 
-        // Auto-save form data
-        const apiKeyInput = document.getElementById('apiKey');
+        // Auto-save Twitter username (not API key for security)
         const twitterUsernameInput = document.getElementById('twitterUsername');
 
-        // Load saved data (but not API key for security)
         if (localStorage.getItem('bags_twitter_username')) {
             twitterUsernameInput.value = localStorage.getItem('bags_twitter_username');
         }
 
-        // Save data on input (Twitter username only)
         twitterUsernameInput.addEventListener('input', () => {
             localStorage.setItem('bags_twitter_username', twitterUsernameInput.value);
         });
