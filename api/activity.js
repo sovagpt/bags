@@ -1,4 +1,4 @@
-// /api/activity.js - Simplified with better error handling
+// /api/activity.js - Fixed to check if wallet is signer & fee payer
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -93,6 +93,17 @@ export default async function handler(req, res) {
           const accountKeys = txData.result.transaction.message.accountKeys;
           const instructions = txData.result.transaction.message.instructions;
           
+          // 🔥 NEW CHECK: Verify the searched wallet is the signer & fee payer
+          const firstAccount = accountKeys[0]; // This is the signer & fee payer
+          const isSignerAndFeePayer = firstAccount === wallet;
+          
+          if (!isSignerAndFeePayer) {
+            console.log(`Wallet ${wallet} is not the signer/fee payer in ${sig.signature}. Signer: ${firstAccount}`);
+            continue; // Skip this transaction
+          }
+          
+          console.log(`✅ Wallet ${wallet} IS the signer & fee payer in ${sig.signature}`);
+          
           // Check each instruction
           for (const instruction of instructions) {
             if (instruction.programIdIndex < accountKeys.length) {
@@ -105,7 +116,7 @@ export default async function handler(req, res) {
               if (programId === FEE_PROGRAM) {
                 foundProgram = true;
                 foundInTx = sig.signature;
-                console.log(`FOUND FEE PROGRAM in ${sig.signature}!`);
+                console.log(`🎯 FOUND FEE PROGRAM CLAIM by ${wallet} in ${sig.signature}!`);
                 break;
               }
             }
@@ -123,7 +134,7 @@ export default async function handler(req, res) {
       }
     }
     
-    console.log(`Check complete. Found program: ${foundProgram}`);
+    console.log(`Check complete. Found valid claim: ${foundProgram}`);
     console.log(`All programs found: ${allPrograms.length}`);
     
     return res.status(200).json({
