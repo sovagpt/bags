@@ -405,37 +405,6 @@
             font-weight: 500;
         }
 
-        .claim-amount {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .amount-card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .amount-value {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .amount-label {
-            font-size: 0.8rem;
-            color: #a0a0a0;
-            margin-top: 0.25rem;
-        }
-
-        /* Results (hidden, now using modal) */
-        .result {
-            display: none;
-        }
-
         .wallet-display {
             background: rgba(255, 255, 255, 0.05);
             padding: 1rem;
@@ -446,58 +415,6 @@
             font-size: 0.875rem;
             word-break: break-all;
             color: #e5e5e5;
-        }
-
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .status-card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1.25rem;
-            border-radius: 12px;
-            border-left: 4px solid #7c77c6;
-            transition: transform 0.2s ease;
-        }
-
-        .status-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .status-card h4 {
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-        }
-
-        .status-card p {
-            color: #a0a0a0;
-            font-size: 0.875rem;
-            margin: 0;
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            display: inline-block;
-        }
-
-        .active { 
-            background: #22c55e; 
-            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
-        }
-        
-        .inactive { 
-            background: #ef4444; 
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
         }
 
         .link-btn {
@@ -520,6 +437,11 @@
             background: rgba(255, 255, 255, 0.15);
             transform: translateY(-2px);
             color: #ffffff;
+        }
+
+        /* Results (hidden, now using modal) */
+        .result {
+            display: none;
         }
 
         /* Footer */
@@ -545,10 +467,6 @@
             .card {
                 padding: 2rem;
                 margin: 0 1rem;
-            }
-
-            .status-grid {
-                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -658,6 +576,7 @@
                     claimAmount: activityData.claimAmount,
                     usdValue: activityData.usdValue
                 });
+                console.log('All claims data:', activityData.allClaims);
 
                 displayResults(cleanUsername, walletAddress, activityData);
 
@@ -675,11 +594,12 @@
             const hasClaimed = data.hasInteracted === true;
             const resultType = hasClaimed ? 'success' : 'error';
             
-            // Use real data from backend - no more hardcoded fallbacks
-            const tokenName = data.tokenName || 'UNKNOWN';
-            const tokenAmount = data.claimAmount || '0';
-            const usdValue = data.usdValue ? `${data.usdValue}` : 'N/A';
-            const contractAddress = data.tokenAddress || 'Not found';
+            console.log('Processing display with data:', data);
+            console.log('All claims data:', data.allClaims);
+            
+            // Use real data from backend
+            const allClaims = data.allClaims || [];
+            const totalClaims = data.totalClaims || 0;
             
             let modalHtml = `
                 <div class="claim-status">
@@ -687,7 +607,7 @@
                         ${hasClaimed ? '✓' : '✗'}
                     </div>
                     <h2>${hasClaimed ? 'Fees Claimed' : 'No Claims Found'}</h2>
-                    <p>@${username}</p>
+                    <p>@${username}${totalClaims > 1 ? ` • ${totalClaims} tokens claimed` : ''}</p>
                 </div>
                 
                 <div style="margin: 1.5rem 0;">
@@ -696,37 +616,30 @@
                 </div>
             `;
             
-            if (hasClaimed) {
-                modalHtml += `
-                    <div class="token-info">
-                        <div class="token-name">${tokenName}</div>
-                        <div class="token-details">Token fees claimed</div>
-                        
-                        <div class="contract-label">Contract Address</div>
-                        <div class="contract-address">${contractAddress}</div>
-                        
-                        <div class="claim-amount">
-                            <div class="amount-card">
-                                <div class="amount-value">${tokenAmount}</div>
-                                <div class="amount-label">WSOL</div>
-                            </div>
-                            <div class="amount-card">
-                                <div class="amount-value">${usdValue}</div>
-                                <div class="amount-label">USD Value</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                if (data.foundInTx) {
+            if (hasClaimed && allClaims.length > 0) {
+                // Display all claims - simplified, no amounts
+                allClaims.forEach((claim, index) => {
                     modalHtml += `
-                        <div style="text-align: center; margin-top: 1.5rem;">
-                            <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">
-                                View Claim Transaction
-                            </a>
+                        <div class="token-info" style="margin-bottom: ${index < allClaims.length - 1 ? '1rem' : '0'};">
+                            <div class="token-name">${claim.name || 'UNKNOWN'}</div>
+                            <div class="token-details">Token ${index + 1} of ${totalClaims}</div>
+                            
+                            <div class="contract-label">Contract Address</div>
+                            <div class="contract-address">${claim.address || 'Not found'}</div>
+                            
+                            <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+                                ${claim.transaction ? `
+                                    <a href="https://solscan.io/tx/${claim.transaction}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
+                                        View Transaction
+                                    </a>
+                                ` : ''}
+                                <a href="https://bags.fm/${claim.address}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
+                                    View on Bags.fm
+                                </a>
+                            </div>
                         </div>
                     `;
-                }
+                });
             } else {
                 modalHtml += `
                     <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 16px; margin: 1.5rem 0;">
@@ -740,10 +653,7 @@
             modalHtml += `
                 <div style="margin-top: 2rem; display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
                     <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
-                        View on Solscan
-                    </a>
-                    <a href="https://bags.fm/${contractAddress}" target="_blank" class="link-btn">
-                        View on Bags.fm
+                        View Wallet on Solscan
                     </a>
                 </div>
             `;
