@@ -225,9 +225,9 @@ export default async function handler(req, res) {
             if (tokenInfo.address) {
               claimTransactions.push(sig.signature);
               allTokenInfo.push({
-                ...tokenInfo,
-                transaction: sig.signature,
-                claimAmountNumber: parseFloat(tokenInfo.amount) || 0 // For sorting
+                address: tokenInfo.address,
+                name: tokenInfo.name,
+                transaction: sig.signature
               });
             }
             
@@ -253,31 +253,34 @@ export default async function handler(req, res) {
     }
     
     console.log(`✅ Balance change check complete. Found claims: ${foundClaim}, Total claims: ${allTokenInfo.length}, Checked: ${checkedCount} transactions`);
+    console.log(`📋 All claims found:`, allTokenInfo);
     
-    // Sort claims by amount (highest first)
-    allTokenInfo.sort((a, b) => b.claimAmountNumber - a.claimAmountNumber);
+    // Remove duplicates based on token address
+    const uniqueClaims = allTokenInfo.filter((claim, index, self) => 
+      index === self.findIndex(c => c.address === claim.address)
+    );
     
-    // Get the primary claim (highest amount)
-    const primaryClaim = allTokenInfo[0] || null;
+    console.log(`🎯 Unique claims after deduplication: ${uniqueClaims.length}`, uniqueClaims);
+    
+    // Get the primary claim (first unique one)
+    const primaryClaim = uniqueClaims[0] || null;
     
     return res.status(200).json({
       wallet: wallet,
       feeProgram: FEE_PROGRAM,
       hasInteracted: foundClaim,
-      status: foundClaim ? `${allTokenInfo.length} Fee Claim${allTokenInfo.length > 1 ? 's' : ''} Found!` : 'No Fee Claims Found',
+      status: foundClaim ? `${uniqueClaims.length} Token${uniqueClaims.length > 1 ? 's' : ''} Claimed!` : 'No Fee Claims Found',
       checkedTransactions: checkedCount,
       foundInTx: claimTransactions[0] || null, // Primary transaction
       method: 'balance_changes_check',
       suspiciousTransactions: suspiciousTransactions.slice(0, 3), // Limit output
       debugInfo: `Checked ${checkedCount} transactions for balance changes with fee program`,
-      // Primary claim data (highest amount)
+      // Primary claim data
       tokenAddress: primaryClaim?.address || null,
       tokenName: primaryClaim?.name || null,
-      claimAmount: primaryClaim?.amount || null,
-      usdValue: primaryClaim?.usdValue || null,
-      // NEW: All claims data
-      allClaims: allTokenInfo,
-      totalClaims: allTokenInfo.length
+      // All unique claims data
+      allClaims: uniqueClaims,
+      totalClaims: uniqueClaims.length
     });
     
   } catch (error) {
