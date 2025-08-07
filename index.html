@@ -643,6 +643,76 @@ body::before {
                 width: 95%;
             }
 
+            .cmd-modal {
+    background: #000000;
+    border: 2px solid #333333;
+    border-radius: 8px;
+    max-width: 700px;
+    width: 90%;
+    padding: 0;
+    overflow: hidden;
+}
+
+.cmd-window {
+    background: #000000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.cmd-header {
+    background: #333333;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #555555;
+}
+
+.cmd-buttons {
+    display: flex;
+    gap: 6px;
+    margin-right: 12px;
+}
+
+.cmd-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.cmd-btn.close { background: #ff5f56; }
+.cmd-btn.minimize { background: #ffbd2e; }
+.cmd-btn.maximize { background: #27ca3f; }
+
+.cmd-title {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.cmd-body {
+    padding: 20px;
+    min-height: 400px;
+    background: #000000;
+}
+
+#cmdOutput {
+    color: #00ff00;
+    white-space: pre-line;
+}
+
+.cmd-cursor {
+    color: #00ff00;
+    animation: blink 1s infinite;
+    display: inline-block;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
             .tooltip {
                 position: fixed;
                 top: 50%;
@@ -673,7 +743,7 @@ body::before {
             <div class="nav-links">
                 <a href="#" class="nav-link" onclick="showTelegramModal()">Telegram Bot <span style="font-size: 0.7rem; opacity: 0.7;">ᶜᵒᵐᶦⁿᵍ ˢᵒᵒⁿ</span></a>
                 <a href="#" class="nav-link" onclick="showLarpModal()">LARP Checker</a>
-                <a href="#" class="nav-link">API</a>
+                <a href="#" class="nav-link" onclick="showAboutModal()">About</a>
             </div>
         </nav>
 
@@ -754,6 +824,29 @@ body::before {
                 </div>
                 
                 <div id="larpResults" style="display: none; margin-top: 2rem; text-align: left;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- About Modal -->
+<div class="modal-overlay" id="aboutModalOverlay">
+    <div class="modal cmd-modal" id="aboutModal">
+        <button class="modal-close" onclick="closeAboutModal()">×</button>
+        <div id="aboutModalContent">
+            <div class="cmd-window">
+                <div class="cmd-header">
+                    <div class="cmd-buttons">
+                        <span class="cmd-btn close"></span>
+                        <span class="cmd-btn minimize"></span>
+                        <span class="cmd-btn maximize"></span>
+                    </div>
+                    <div class="cmd-title">Command Prompt - Bags Analytics</div>
+                </div>
+                <div class="cmd-body">
+                    <div id="cmdOutput"></div>
+                    <div class="cmd-cursor">_</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1252,6 +1345,92 @@ function displayLarpResults(data) {
     
     resultsEl.innerHTML = resultsHtml;
     resultsEl.style.display = 'block';
+}
+
+    // About modal functions
+function showAboutModal() {
+    const aboutModalOverlay = document.getElementById('aboutModalOverlay');
+    aboutModalOverlay.style.display = 'flex';
+    
+    setTimeout(() => {
+        aboutModalOverlay.classList.add('show');
+        startCmdAnimation();
+    }, 10);
+}
+
+function closeAboutModal() {
+    const aboutModalOverlay = document.getElementById('aboutModalOverlay');
+    aboutModalOverlay.classList.remove('show');
+    
+    setTimeout(() => {
+        aboutModalOverlay.style.display = 'none';
+        // Reset for next time
+        document.getElementById('cmdOutput').innerHTML = '';
+    }, 300);
+}
+
+// Close about modal when clicking overlay
+document.getElementById('aboutModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAboutModal();
+    }
+});
+
+function startCmdAnimation() {
+    const output = document.getElementById('cmdOutput');
+    const commands = [
+        'C:\\Bags\\Analytics> whoami',
+        'bags-fee-tracker',
+        '',
+        'C:\\Bags\\Analytics> cat mission.txt',
+        'Track developer behavior on Bags.fm',
+        'Expose LARPers and serial token farmers', 
+        'Give traders the edge with real data',
+        '',
+        'C:\\Bags\\Analytics> ls features/',
+        '✓ Fee claim detection',
+        '✓ Multi-token analysis',
+        '✓ Creator verification', 
+        '✓ LARP detection (coming soon)',
+        '✓ Telegram alerts (coming soon)',
+        '',
+        'C:\\Bags\\Analytics> cat stats.txt',
+        'Analyzing 10,000+ wallet addresses daily',
+        'Connected to Solana mainnet',
+        'Powered by Bags.fm API + AI',
+        '',
+        'C:\\Bags\\Analytics> echo $CLAIMBAGS',
+        '"Be ahead of the game"',
+        '',
+        'C:\\Bags\\Analytics> contact --help',
+        'Built by: @devclaimbags',
+        'Website: devclaimbags.fm',
+        'Version: 1.0.0-beta',
+        '',
+        'C:\\Bags\\Analytics> '
+    ];
+    
+    let currentLine = 0;
+    let currentChar = 0;
+    
+    function typeNextChar() {
+        if (currentLine < commands.length) {
+            const line = commands[currentLine];
+            
+            if (currentChar < line.length) {
+                output.innerHTML += line[currentChar];
+                currentChar++;
+                setTimeout(typeNextChar, 30); // Fast typing speed
+            } else {
+                output.innerHTML += '\n';
+                currentLine++;
+                currentChar = 0;
+                setTimeout(typeNextChar, currentLine < commands.length ? 150 : 0); // Pause between lines
+            }
+        }
+    }
+    
+    typeNextChar();
 }
     </script>
 </body>
