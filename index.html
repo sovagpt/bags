@@ -291,7 +291,7 @@
                 console.log(`Found wallet: ${walletAddress}`);
 
                 // Step 2: Check wallet activity via Solscan API
-                const activityResponse = await fetch(`/api/activity?wallet=${encodeURIComponent(walletAddress)}`);
+                const activityResponse = await fetch(`/api/activity?wallet=${encodeURIComponent(walletAddress)}&username=${encodeURIComponent(cleanUsername)}`);
                 const activityData = await activityResponse.json();
 
                 console.log('Activity data:', activityData);
@@ -314,8 +314,18 @@
             
             const resultType = activityLevel === 'high' ? 'success' : activityLevel === 'medium' ? 'warning' : 'error';
 
+            // Build claim details if available
+            let claimDetailsHtml = '';
+            if (activity.claimDetails && activity.claimDetails.length > 0) {
+                claimDetailsHtml = '<br><strong>Recent Fee Claims:</strong><br>';
+                activity.claimDetails.forEach(claim => {
+                    const date = new Date(claim.timestamp).toLocaleDateString();
+                    claimDetailsHtml += `• ${date}: ${claim.solAmount} SOL (${claim.usdValue?.toFixed(2) || '0'}) via ${claim.program}<br>`;
+                });
+            }
+
             showResult(`
-                <strong>✅ Activity Check Complete!</strong><br><br>
+                <strong>✅ Fee Claim Analysis Complete!</strong><br><br>
                 
                 <strong>User:</strong> @${username}<br>
                 <strong>Wallet:</strong>
@@ -323,38 +333,49 @@
                 
                 <div class="activity-grid">
                     <div class="activity-card">
-                        <h4><span class="status-dot ${statusDot}"></span>Activity Level</h4>
+                        <h4><span class="status-dot ${statusDot}"></span>Claim Activity</h4>
                         <p>${statusText}</p>
                     </div>
                     <div class="activity-card">
-                        <h4>💰 SOL Balance</h4>
+                        <h4>💰 Current Balance</h4>
                         <p>${activity.balance} SOL</p>
                     </div>
                     <div class="activity-card">
-                        <h4>📊 Recent Transactions</h4>
-                        <p>${activity.recentTxCount} in 30 days</p>
+                        <h4>🎯 Actual Fee Claims</h4>
+                        <p>${activity.actualFeeClaims || 0} verified claims</p>
                     </div>
                     <div class="activity-card">
-                        <h4>💸 Large Claims</h4>
-                        <p>${activity.largeClaims} claims > 1 SOL</p>
+                        <h4>💸 Total Claimed</h4>
+                        <p>${activity.totalClaimedSOL || '0.00'} SOL</p>
+                    </div>
+                    <div class="activity-card">
+                        <h4>💵 USD Value</h4>
+                        <p>${activity.totalClaimedUSD || '0.00'}</p>
+                    </div>
+                    <div class="activity-card">
+                        <h4>📊 Avg Claim Size</h4>
+                        <p>${activity.avgClaimSize || '0.00'} SOL</p>
                     </div>
                 </div>
                 
-                <strong>Fee Claiming Status:</strong> ${activity.largeClaims > 0 ? '🟢 Actively claiming fees' : '🟡 Limited claiming activity'}<br><br>
+                <strong>Fee Claiming Status:</strong> ${activity.actualFeeClaims > 0 ? '🟢 Actively claiming fees from their tokens' : '🔴 No verified fee claims detected'}<br>
+                ${activity.lastClaim ? `<strong>Last Claim:</strong> ${new Date(activity.lastClaim).toLocaleDateString()}<br>` : ''}
+                
+                ${claimDetailsHtml}
                 
                 <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="solscan-link">
                     🔍 View on Solscan
                 </a>
                 
                 <br><br>
-                <small><strong>Note:</strong> Activity is based on transaction patterns and SOL movements that indicate fee claiming behavior.</small>
+                <small><strong>Analysis:</strong> This checks for actual "Claim fees" transactions from Meteora/Raydium programs, not random transfers. Only verified fee claims are counted.</small>
             `, resultType);
         }
 
         function determineActivityLevel(activity) {
-            if (activity.largeClaims >= 5 && activity.recentTxCount >= 20) {
+            if (activity.actualFeeClaims >= 3 && parseFloat(activity.totalClaimedSOL) >= 2.0) {
                 return 'high';
-            } else if (activity.largeClaims >= 2 && activity.recentTxCount >= 10) {
+            } else if (activity.actualFeeClaims >= 1 && parseFloat(activity.totalClaimedSOL) >= 0.5) {
                 return 'medium';
             } else {
                 return 'low';
