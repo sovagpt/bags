@@ -115,10 +115,10 @@ export default async function handler(req, res) {
     // Now check each transaction for balance changes and fee program involvement
     const signatures = signaturesData.result.slice(0, 50); // Limit to avoid timeouts
     let foundClaim = false;
-    let claimTransaction = null;
+    let claimTransactions = []; // Array to store multiple claims
     let checkedCount = 0;
     let suspiciousTransactions = [];
-    let tokenInfo = null;
+    let allTokenInfo = []; // Array to store all token claims
     
     console.log(`🔍 Checking ${signatures.length} transactions for fee program interactions...`);
     
@@ -215,20 +215,30 @@ export default async function handler(req, res) {
             }
           }
           
-          foundClaim = true;
-          claimTransaction = sig.signature;
+          if (hasPositiveBalanceChange) {
+            foundClaim = true;
+            
+            // Extract token information from this transaction
+            const tokenInfo = extractTokenInfo(transaction, meta);
+            console.log(`🪙 Extracted token info:`, tokenInfo);
+            
+            if (tokenInfo.address) {
+              claimTransactions.push(sig.signature);
+              allTokenInfo.push({
+                ...tokenInfo,
+                transaction: sig.signature,
+                claimAmountNumber: parseFloat(tokenInfo.amount) || 0 // For sorting
+              });
+            }
+            
+            suspiciousTransactions.push({
+              signature: sig.signature,
+              hasPositiveBalanceChange,
+              involvesFeeProgram: true
+            });
+          }
           
-          // Extract token information from this transaction
-          tokenInfo = extractTokenInfo(transaction, meta);
-          console.log(`🪙 Extracted token info:`, tokenInfo);
-          
-          suspiciousTransactions.push({
-            signature: sig.signature,
-            hasPositiveBalanceChange,
-            involvesFeeProgram: true
-          });
-          
-          break; // Found what we need
+          // Don't break - continue looking for more claims
         }
         
         // Small delay to avoid rate limits
@@ -242,23 +252,32 @@ export default async function handler(req, res) {
       }
     }
     
-    console.log(`✅ Balance change check complete. Found claim: ${foundClaim}, Checked: ${checkedCount} transactions`);
+    console.log(`✅ Balance change check complete. Found claims: ${foundClaim}, Total claims: ${allTokenInfo.length}, Checked: ${checkedCount} transactions`);
+    
+    // Sort claims by amount (highest first)
+    allTokenInfo.sort((a, b) => b.claimAmountNumber - a.claimAmountNumber);
+    
+    // Get the primary claim (highest amount)
+    const primaryClaim = allTokenInfo[0] || null;
     
     return res.status(200).json({
       wallet: wallet,
       feeProgram: FEE_PROGRAM,
       hasInteracted: foundClaim,
-      status: foundClaim ? 'Fee Claims Found!' : 'No Fee Claims Found',
+      status: foundClaim ? `${allTokenInfo.length} Fee Claim${allTokenInfo.length > 1 ? 's' : ''} Found!` : 'No Fee Claims Found',
       checkedTransactions: checkedCount,
-      foundInTx: claimTransaction,
+      foundInTx: claimTransactions[0] || null, // Primary transaction
       method: 'balance_changes_check',
       suspiciousTransactions: suspiciousTransactions.slice(0, 3), // Limit output
       debugInfo: `Checked ${checkedCount} transactions for balance changes with fee program`,
-      // NEW: Token information
-      tokenAddress: tokenInfo?.address || null,
-      tokenName: tokenInfo?.name || null,
-      claimAmount: tokenInfo?.amount || null,
-      usdValue: tokenInfo?.usdValue || null
+      // Primary claim data (highest amount)
+      tokenAddress: primaryClaim?.address || null,
+      tokenName: primaryClaim?.name || null,
+      claimAmount: primaryClaim?.amount || null,
+      usdValue: primaryClaim?.usdValue || null,
+      // NEW: All claims data
+      allClaims: allTokenInfo,
+      totalClaims: allTokenInfo.length
     });
     
   } catch (error) {
