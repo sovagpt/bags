@@ -115,6 +115,23 @@ export default async function handler(req, res) {
       }
     }
     
+    // Helper function to find user's profile from creators data
+    function findUserProfile(claims, userWallet) {
+      for (const claim of claims) {
+        if (claim.creators) {
+          const userCreator = claim.creators.find(creator => creator.wallet === userWallet);
+          if (userCreator) {
+            return {
+              pfp: userCreator.pfp,
+              username: userCreator.username,
+              twitterUsername: userCreator.twitterUsername
+            };
+          }
+        }
+      }
+      return null;
+    }
+
     // Get wallet's transaction signatures
     console.log('Getting wallet transaction signatures...');
     
@@ -315,7 +332,9 @@ export default async function handler(req, res) {
       tokenName: primaryClaim?.name || null,
       // All unique claims data (now with creators)
       allClaims: uniqueClaims,
-      totalClaims: uniqueClaims.length
+      totalClaims: uniqueClaims.length,
+      // User profile info - get from the first creator that matches the searched user
+      userProfile: uniqueClaims.length > 0 ? findUserProfile(uniqueClaims, wallet) : null
     });
     
   } catch (error) {
