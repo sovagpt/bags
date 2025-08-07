@@ -193,13 +193,18 @@
         </div>
 
         <div class="api-status">
-            <strong>✅ Proxy Ready:</strong> Using Vercel serverless function to bypass CORS restrictions
+            <strong>✅ API Connected:</strong> Using the corrected endpoint from Bags support
         </div>
 
         <form id="walletForm">
             <div class="form-group">
+                <label for="apiKey">Bags.fm API Key</label>
+                <input type="password" id="apiKey" placeholder="Enter your bags.fm API key" required>
+            </div>
+
+            <div class="form-group">
                 <label for="twitterUserId">Twitter User ID</label>
-                <input type="text" id="twitterUserId" placeholder="e.g., 123456789" required>
+                <input type="text" id="twitterUserId" placeholder="e.g., 62821796 (WinRAR)" required>
                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
                     Need to find a Twitter User ID? Use <a href="https://randomtools.io/find-my-twitter-id/" target="_blank">randomtools.io</a>
                 </small>
@@ -217,25 +222,17 @@
     </div>
 
     <script>
-        // For production: set your API key here, or use environment variables with a build step
-        const API_KEY = 'bags_prod_DSfYkGka2rlPuntXpTKcON0hOLQj5eBIxuNH9HTHPbM';
-
         document.getElementById('walletForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const apiKey = document.getElementById('apiKey').value.trim();
             const twitterUserId = document.getElementById('twitterUserId').value.trim();
             const loadingEl = document.getElementById('loading');
             const resultEl = document.getElementById('result');
             const submitBtn = document.querySelector('button[type="submit"]');
             
-            if (!twitterUserId) {
-                showResult('Please enter a Twitter User ID', 'error');
-                return;
-            }
-
-            // Check if API key is available
-            if (!API_KEY) {
-                showResult('❌ API key not configured.', 'error');
+            if (!apiKey || !twitterUserId) {
+                showResult('Please fill in both API key and Twitter User ID', 'error');
                 return;
             }
 
@@ -245,82 +242,23 @@
             submitBtn.disabled = true;
 
             try {
-                // Try multiple possible endpoint URLs with different parameter styles
-                const possibleUrls = [
-                    // Query parameter style
-                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
-                    // Path parameter style
-                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/${encodeURIComponent(twitterUserId)}`,
-                    // Different query param name
-                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitter_user_id=${encodeURIComponent(twitterUserId)}`,
-                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?userId=${encodeURIComponent(twitterUserId)}`,
-                    // POST request with body (maybe it's not GET?)
-                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet`,
-                    // Alternative domains
-                    `https://api.bags.fm/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
-                ];
-
-                const authMethods = [
-                    { 'x-api-key': API_KEY },
-                    { 'Authorization': `Bearer ${API_KEY}` }
-                ];
-
-                let lastError = null;
-                let response = null;
-                let data = null;
-
-                // Try each URL with each auth method and different HTTP methods
-                for (const url of possibleUrls) {
-                    for (const authHeaders of authMethods) {
-                        // Try GET first
-                        try {
-                            console.log(`Trying GET ${url} with auth:`, Object.keys(authHeaders)[0]);
-                            response = await fetch(url, {
-                                method: 'GET',
-                                headers: authHeaders
-                            });
-
-                            if (response.ok) {
-                                data = await response.json();
-                                console.log(`✅ Success with GET ${url} using ${Object.keys(authHeaders)[0]}`);
-                                break;
-                            } else {
-                                console.log(`❌ GET failed: ${url} - Status: ${response.status}`);
-                            }
-                        } catch (error) {
-                            console.log(`❌ GET error: ${url} - ${error.message}`);
-                        }
-
-                        // If GET failed and this is the base URL, try POST with body
-                        if (url.endsWith('/wallet') && !url.includes('?')) {
-                            try {
-                                console.log(`Trying POST ${url} with body`);
-                                response = await fetch(url, {
-                                    method: 'POST',
-                                    headers: {
-                                        ...authHeaders,
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ twitterUserId: twitterUserId })
-                                });
-
-                                if (response.ok) {
-                                    data = await response.json();
-                                    console.log(`✅ Success with POST ${url}`);
-                                    break;
-                                }
-                            } catch (error) {
-                                console.log(`❌ POST error: ${url} - ${error.message}`);
-                                lastError = error;
-                            }
-                        }
+                // CORRECTED ENDPOINT from Bags support: added /twitter
+                const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${encodeURIComponent(twitterUserId)}`;
+                
+                console.log(`Making request to: ${url}`);
+                console.log(`Twitter User ID: ${twitterUserId}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey
                     }
-                    if (response && response.ok) break;
-                }
+                });
 
-                if (!response || !response.ok) {
-                    throw lastError || new Error(`All API endpoints failed. Last status: ${response?.status || 'Unknown'}`);
-                }
+                console.log(`Response status: ${response.status}`);
+                
+                const data = await response.json();
+                console.log(`Response data:`, data);
 
                 if (response.ok && data.success) {
                     const walletAddress = data.response;
@@ -332,22 +270,25 @@
                         <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
                     `, 'success');
                 } else {
-                    const errorMsg = data.message || data.error || 'Unknown error occurred';
+                    let errorMsg = data.error || 'Unknown error occurred';
+                    
+                    // Provide helpful error messages
+                    if (errorMsg.includes('not found') || response.status === 404) {
+                        errorMsg = `Twitter user ${twitterUserId} not found in Bags system. They may need to create a Bags account first.`;
+                    } else if (errorMsg.includes('API key')) {
+                        errorMsg = 'Invalid API key. Please check your key from the Bags developer dashboard.';
+                    }
+                    
                     showResult(`❌ Error: ${errorMsg}`, 'error');
                 }
             } catch (error) {
-                console.error('API Error:', error);
-                let errorMessage = 'Failed to connect to bags.fm API. ';
+                console.error('Network Error:', error);
                 
                 if (error.message.includes('CORS')) {
-                    errorMessage += 'This is likely due to CORS restrictions.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage += 'Please check your internet connection.';
+                    showResult(`❌ CORS Error: Unable to connect directly from browser. This API may need to be called from a server.`, 'error');
                 } else {
-                    errorMessage += error.message;
+                    showResult(`❌ Network Error: ${error.message}`, 'error');
                 }
-                
-                showResult(`❌ ${errorMessage}`, 'error');
             } finally {
                 loadingEl.style.display = 'none';
                 submitBtn.disabled = false;
@@ -378,16 +319,24 @@
             });
         }
 
-        // Auto-save Twitter User ID
+        // Auto-save form data
+        const apiKeyInput = document.getElementById('apiKey');
         const twitterUserIdInput = document.getElementById('twitterUserId');
 
+        // Load saved data (but not API key for security)
         if (localStorage.getItem('bags_twitter_id')) {
             twitterUserIdInput.value = localStorage.getItem('bags_twitter_id');
         }
 
+        // Save data on input (Twitter ID only)
         twitterUserIdInput.addEventListener('input', () => {
             localStorage.setItem('bags_twitter_id', twitterUserIdInput.value);
         });
+
+        // Pre-fill WinRAR's ID for testing
+        if (!twitterUserIdInput.value) {
+            twitterUserIdInput.value = '62821796';
+        }
     </script>
 </body>
 </html>
