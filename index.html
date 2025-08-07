@@ -286,6 +286,29 @@
             transform: scale(1) translateY(0);
         }
 
+        /* Custom Scrollbar */
+        .modal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .modal::-webkit-scrollbar-thumb {
+            background: rgba(124, 119, 198, 0.6);
+            border-radius: 10px;
+        }
+
+        .modal::-webkit-scrollbar-thumb:hover {
+            background: rgba(124, 119, 198, 0.8);
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1) translateY(0);
+        }
+
         .modal::before {
             content: '';
             position: absolute;
@@ -363,6 +386,17 @@
         .claim-status p {
             color: #a0a0a0;
             font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
 
         /* Modal Tabs */
@@ -481,7 +515,8 @@
             font-size: 0.8rem;
             color: #e5e5e5;
             word-break: break-all;
-            border-left: 3px solid #7c77c6;
+            border-left: 3px solid #22c55e;
+            border-right: 3px solid #22c55e;
         }
 
         .contract-label {
@@ -496,7 +531,8 @@
             padding: 1rem;
             border-radius: 12px;
             margin: 1rem 0;
-            border-left: 4px solid #7c77c6;
+            border-left: 4px solid #22c55e;
+            border-right: 4px solid #22c55e;
             font-family: 'Monaco', 'Menlo', 'SF Mono', monospace;
             font-size: 0.875rem;
             word-break: break-all;
@@ -617,64 +653,6 @@
             }
         }
     </style>
-    <body>
-    <div class="header">
-        <nav class="nav">
-            <div class="logo">
-                <img src="https://cdn.prod.website-files.com/6740d85c4e3daeef29a89470/689437c7dfaa854544093c3d_688eec4a9dc2bb9ca5c7bcdb_bags-icon%20(1).png" alt="Bags" style="height: 24px; width: auto; margin-right: 8px; vertical-align: middle;">
-                Bags Analytics
-            </div>
-            <div class="nav-links">
-                <a href="#" class="nav-link">Dashboard</a>
-                <a href="#" class="nav-link">Analytics</a>
-                <a href="#" class="nav-link">API</a>
-            </div>
-        </nav>
-
-        <div class="hero">
-            <h1>Did Dev Claim Bags</h1>
-            <p>Advanced analytics for Bags.fm fee distribution tracking. Monitor user engagement and claiming patterns in real-time.</p>
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="card">
-            <form id="checkerForm">
-                <div class="form-group">
-                    <label for="twitterUsername">Twitter Username Analysis</label>
-                    <div class="input-container">
-                        <input type="text" id="twitterUsername" placeholder="Enter username (e.g., grokstation)" required value="grokstation">
-                    </div>
-                    <div class="input-hint">
-                        Enter a Twitter username to analyze their Bags fee claiming activity
-                    </div>
-                </div>
-
-                <button type="submit">
-                    <span>Analyze Fee Claims</span>
-                </button>
-            </form>
-
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Analyzing blockchain data...</p>
-            </div>
-
-            <div class="result" id="result"></div>
-        </div>
-    </div>
-
-    <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal" id="modal">
-            <button class="modal-close" onclick="closeModal()">×</button>
-            <div id="modalContent"></div>
-        </div>
-    </div>
-
-    <div class="footer">
-        <p>Powered by Bags.fm API & Solscan</p>
-    </div>
 </head>
 <script>
         // Tab switching function
@@ -747,10 +725,18 @@
             
             console.log('Processing display with data:', data);
             console.log('All claims data:', data.allClaims);
+            console.log('User profile:', data.userProfile);
             
             // Use real data from backend
             const allClaims = data.allClaims || [];
             const totalClaims = data.totalClaims || 0;
+            const userProfile = data.userProfile;
+            
+            // Create user avatar HTML
+            let userAvatarHtml = '';
+            if (userProfile && userProfile.pfp) {
+                userAvatarHtml = `<img src="${userProfile.pfp}" alt="${username}" class="user-avatar" onerror="this.style.display='none'">`;
+            }
             
             let modalHtml = `
                 <div class="claim-status">
@@ -758,7 +744,10 @@
                         ${hasClaimed ? '✓' : '✗'}
                     </div>
                     <h2>${hasClaimed ? 'Fees Claimed' : 'No Claims Found'}</h2>
-                    <p>@${username}${totalClaims > 1 ? ` • ${totalClaims} tokens claimed` : ''}</p>
+                    <p>
+                        ${userAvatarHtml}
+                        @${username}${totalClaims > 1 ? ` • ${totalClaims} tokens claimed` : ''}
+                    </p>
                 </div>
             `;
 
