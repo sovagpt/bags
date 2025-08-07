@@ -242,117 +242,72 @@
             submitBtn.disabled = true;
 
             try {
-                // Try different parameter formats based on the validation error
-                const baseUrl = 'https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter';
-                
-                const urlsToTry = [
-                    // Original format
-                    `${baseUrl}?twitterUserId=${encodeURIComponent(twitterUserId)}`,
-                    // Try different parameter names
-                    `${baseUrl}?twitter_user_id=${encodeURIComponent(twitterUserId)}`,
-                    `${baseUrl}?userId=${encodeURIComponent(twitterUserId)}`,
-                    `${baseUrl}?user_id=${encodeURIComponent(twitterUserId)}`,
-                    `${baseUrl}?id=${encodeURIComponent(twitterUserId)}`,
-                    // Try as path parameter
-                    `${baseUrl}/${encodeURIComponent(twitterUserId)}`
-                ];
-
+                // Based on your original working curl, let's try exact replication
                 console.log(`Twitter User ID: ${twitterUserId}`);
                 
-                for (let i = 0; i < urlsToTry.length; i++) {
-                    const url = urlsToTry[i];
-                    console.log(`\nTrying format ${i + 1}: ${url}`);
-                    
-                    try {
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'x-api-key': apiKey,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        console.log(`Response status: ${response.status}`);
-                        
-                        const data = await response.json();
-                        console.log(`Response data:`, data);
-
-                        if (response.ok && data.success) {
-                            const walletAddress = data.response;
-                            showResult(`
-                                <strong>✅ Success!</strong><br><br>
-                                <strong>Twitter User ID:</strong> ${twitterUserId}<br>
-                                <strong>Wallet Address:</strong>
-                                <div class="wallet-display">${walletAddress}</div>
-                                <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
-                                <br><br>
-                                <small>✅ Working URL format: ${url}</small>
-                            `, 'success');
-                            return;
-                        } else if (response.status === 400) {
-                            console.log(`400 error with format ${i + 1}, trying next...`);
-                            continue; // Try next format
-                        } else {
-                            console.log(`Non-400 error: ${response.status}, stopping attempts`);
-                            break; // Different error, stop trying
-                        }
-                    } catch (fetchError) {
-                        console.log(`Fetch error for format ${i + 1}: ${fetchError.message}`);
-                        continue;
+                // Try the exact format from your working curl example
+                const exactUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${twitterUserId}`;
+                
+                console.log(`\nTrying exact curl replication: ${exactUrl}`);
+                
+                const response = await fetch(exactUrl, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey
+                        // No Content-Type for GET request
                     }
-                }
+                });
 
-                // If we get here, all formats failed
-                showResult(`
-                    <strong>❌ Parameter Format Error</strong><br><br>
-                    <strong>Issue:</strong> The API expects a string parameter but is getting undefined.<br><br>
-                    <strong>Tried formats:</strong><br>
-                    • ?twitterUserId=${twitterUserId}<br>
-                    • ?twitter_user_id=${twitterUserId}<br>
-                    • ?userId=${twitterUserId}<br>
-                    • /${twitterUserId}<br><br>
+                console.log(`Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`Response data:`, data);
                     
-                    <strong>Possible solutions:</strong><br>
-                    • The API might expect a different parameter name<br>
-                    • Try a POST request with JSON body<br>
-                    • Contact Bags support for the correct parameter format<br>
-                    • The endpoint documentation might still be incomplete
-                `, 'error');
-
-                // Try POST request as fallback
-                console.log('\nTrying POST request with JSON body...');
-                try {
-                    const postResponse = await fetch(baseUrl, {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            twitterUserId: twitterUserId,
-                            twitter_user_id: twitterUserId,
-                            userId: twitterUserId
-                        })
-                    });
-
-                    console.log(`POST Response status: ${postResponse.status}`);
-                    const postData = await postResponse.json();
-                    console.log(`POST Response data:`, postData);
-
-                    if (postResponse.ok && postData.success) {
-                        const walletAddress = postData.response;
+                    if (data.success) {
+                        const walletAddress = data.response;
                         showResult(`
-                            <strong>✅ Success (POST)!</strong><br><br>
+                            <strong>✅ Success!</strong><br><br>
                             <strong>Twitter User ID:</strong> ${twitterUserId}<br>
                             <strong>Wallet Address:</strong>
                             <div class="wallet-display">${walletAddress}</div>
                             <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
-                            <br><br>
-                            <small>✅ Worked with POST request</small>
                         `, 'success');
+                        return;
                     }
-                } catch (postError) {
-                    console.log(`POST request failed: ${postError.message}`);
+                } else {
+                    const responseText = await response.text();
+                    console.log(`Error response text:`, responseText);
+                    
+                    // Try to parse as JSON
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        console.log(`Parsed error:`, errorData);
+                        
+                        if (errorData.error && errorData.error.includes('undefined')) {
+                            showResult(`
+                                <strong>❌ API Parameter Issue</strong><br><br>
+                                <strong>The API is not recognizing the twitterUserId parameter.</strong><br><br>
+                                
+                                <strong>Debug Info:</strong><br>
+                                • URL: ${exactUrl}<br>
+                                • Parameter: twitterUserId=${twitterUserId}<br>
+                                • API Error: Parameter received as "undefined"<br><br>
+                                
+                                <strong>This suggests:</strong><br>
+                                • The endpoint may still be under development<br>
+                                • Missing required parameters in the documentation<br>
+                                • API version mismatch<br><br>
+                                
+                                <strong>Action needed:</strong><br>
+                                Contact Bags support with this specific error - the API is not reading the twitterUserId parameter correctly.
+                            `, 'error');
+                        } else {
+                            showResult(`❌ API Error: ${errorData.error || responseText}`, 'error');
+                        }
+                    } catch (parseError) {
+                        showResult(`❌ API returned non-JSON response: ${responseText}`, 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Network Error:', error);
