@@ -1073,162 +1073,200 @@ body::before {
         });
 
         function displayResults(username, walletAddress, data) {
-            // Use the exact property from backend response
-            const hasClaimed = data.hasInteracted === true;
-            const resultType = hasClaimed ? 'success' : 'error';
+    // Use the exact property from backend response
+    const hasClaimed = data.hasInteracted === true;
+    const resultType = hasClaimed ? 'success' : 'error';
+    
+    console.log('Processing display with data:', data);
+    console.log('All claims data:', data.allClaims);
+    console.log('User profile:', data.userProfile);
+    console.log('Claim metrics:', data.claimMetrics);
+    
+    // Use real data from backend
+    const allClaims = data.allClaims || [];
+    const totalClaims = data.totalClaims || 0;
+    const userProfile = data.userProfile;
+    
+    // Create user avatar HTML
+    let userAvatarHtml = '';
+    if (userProfile && userProfile.pfp) {
+        userAvatarHtml = `<img src="${userProfile.pfp}" alt="${username}" class="user-avatar" onerror="this.style.display='none'">`;
+    }
+    
+    let modalHtml = `
+        <div class="claim-status">
+            <div class="claim-status-icon ${resultType}">
+                ${hasClaimed ? '✓' : '✗'}
+            </div>
+            <h2>${hasClaimed ? 'Fees Claimed' : 'No Claims Found'}</h2>
+            <p>
+                ${userAvatarHtml}
+                @${username}${totalClaims > 1 ? ` • ${totalClaims} tokens claimed` : ''}
+            </p>
+        </div>
+    `;
+
+    // Add timing analysis if we have claim data
+    if (hasClaimed && data.claimMetrics) {
+        const metrics = data.claimMetrics;
+        const firstClaimDate = new Date(metrics.firstClaimDate);
+        const lastClaimDate = new Date(metrics.lastClaimDate);
+        
+        // Format dates nicely
+        const formatDate = (date) => {
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
             
-            console.log('Processing display with data:', data);
-            console.log('All claims data:', data.allClaims);
-            console.log('User profile:', data.userProfile);
-            
-            // Use real data from backend
-            const allClaims = data.allClaims || [];
-            const totalClaims = data.totalClaims || 0;
-            const userProfile = data.userProfile;
-            
-            // Create user avatar HTML
-            let userAvatarHtml = '';
-            if (userProfile && userProfile.pfp) {
-                userAvatarHtml = `<img src="${userProfile.pfp}" alt="${username}" class="user-avatar" onerror="this.style.display='none'">`;
-            }
-            
-            let modalHtml = `
-                <div class="claim-status">
-                    <div class="claim-status-icon ${resultType}">
-                        ${hasClaimed ? '✓' : '✗'}
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 30) return `${diffDays} days ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            return `${Math.floor(diffDays / 365)} years ago`;
+        };
+
+        modalHtml += `
+            <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; margin: 1.5rem 0; border-left: 4px solid #22c55e;">
+                <h3 style="color: #ffffff; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    📊 Claim Timeline
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                        <div style="color: #a0a0a0; font-size: 0.85rem; margin-bottom: 0.25rem;">First Claim</div>
+                        <div style="color: #e5e5e5; font-weight: 600;">${formatDate(firstClaimDate)}</div>
                     </div>
-                    <h2>${hasClaimed ? 'Fees Claimed' : 'No Claims Found'}</h2>
-                    <p>
-                        ${userAvatarHtml}
-                        @${username}${totalClaims > 1 ? ` • ${totalClaims} tokens claimed` : ''}
-                    </p>
+                    <div style="text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                        <div style="color: #a0a0a0; font-size: 0.85rem; margin-bottom: 0.25rem;">Last Claim</div>
+                        <div style="color: #e5e5e5; font-weight: 600;">${formatDate(lastClaimDate)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    if (hasClaimed && allClaims.length > 0) {
+        // Add tabs
+        modalHtml += `
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchTab('claims')">Token Claims</button>
+                <button class="modal-tab" onclick="switchTab('creators')">Token Creators</button>
+            </div>
+        `;
+
+        // Claims Tab Content
+        modalHtml += `
+            <div class="tab-content active" id="claims-tab">
+                <div style="margin: 1.5rem 0;">
+                    <strong style="color: #ffffff;">Wallet Address:</strong>
+                    <div class="wallet-display">${walletAddress}</div>
+                </div>
+        `;
+
+        // Display all claims with hover tooltips
+        allClaims.forEach((claim, index) => {
+            const creators = claim.creators || [];
+            
+            let tooltipContent = '';
+            if (creators.length > 0) {
+                tooltipContent = `
+                    <div><strong>Token Creators:</strong></div>
+                    ${creators.slice(0, 3).map(creator => `
+                        <div class="tooltip-creators">
+                            <img src="${creator.pfp}" alt="${creator.username}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9IiM3Yzc3YzYiLz4KPHBhdGggZD0iTTEyIDEyQzkuNzkgMTIgOCAxMC4yMSA4IDhTOS43OSA0IDEyIDRTMTYgNS43OSAxNiA4UzE0LjIxIDEyIDEyIDEyWk0xMiAxNEMxNi40MiAxNCAyMCAxNS43OSAyMCAyMFYyMkgyVjIwQzIgMTUuNzkgNS41OCAxNCAxMiAxNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo='">
+                            <span>@${creator.username} (${(creator.royaltyBps / 100).toFixed(1)}%)</span>
+                        </div>
+                    `).join('')}
+                    ${creators.length > 3 ? `<div>+${creators.length - 3} more creators</div>` : ''}
+                `;
+            } else {
+                tooltipContent = '<div>Creator information not available</div>';
+            }
+
+            modalHtml += `
+                <div class="token-info" style="margin-bottom: ${index < allClaims.length - 1 ? '1rem' : '0'};">
+                    <div class="tooltip">${tooltipContent}</div>
+                    
+                    <div class="token-name">${claim.name || 'UNKNOWN'}</div>
+                    <div class="token-details">Token ${index + 1} of ${totalClaims}</div>
+                    
+                    <div class="contract-label">Contract Address</div>
+                    <div class="contract-address">${claim.address || 'Not found'}</div>
+                    
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+                        ${claim.transaction ? `
+                            <a href="https://solscan.io/tx/${claim.transaction}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
+                                View Transaction
+                            </a>
+                        ` : ''}
+                        <a href="https://bags.fm/${claim.address}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
+                            View on Bags.fm
+                        </a>
+                    </div>
                 </div>
             `;
+        });
 
-            if (hasClaimed && allClaims.length > 0) {
-                // Add tabs
-                modalHtml += `
-                    <div class="modal-tabs">
-                        <button class="modal-tab active" onclick="switchTab('claims')">Token Claims</button>
-                        <button class="modal-tab" onclick="switchTab('creators')">Token Creators</button>
-                    </div>
-                `;
+        modalHtml += `</div>`; // Close claims tab
 
-                // Claims Tab Content
-                modalHtml += `
-                    <div class="tab-content active" id="claims-tab">
-                        <div style="margin: 1.5rem 0;">
-                            <strong style="color: #ffffff;">Wallet Address:</strong>
-                            <div class="wallet-display">${walletAddress}</div>
-                        </div>
-                `;
+        // Creators Tab Content
+        modalHtml += `
+            <div class="tab-content" id="creators-tab">
+                <div style="margin: 1.5rem 0;">
+                    <h3 style="color: #ffffff; margin-bottom: 1rem;">Token Creators & Royalties</h3>
+        `;
 
-                // Display all claims with hover tooltips
-                allClaims.forEach((claim, index) => {
-                    const creators = claim.creators || [];
-                    
-                    let tooltipContent = '';
-                    if (creators.length > 0) {
-                        tooltipContent = `
-                            <div><strong>Token Creators:</strong></div>
-                            ${creators.slice(0, 3).map(creator => `
-                                <div class="tooltip-creators">
-                                    <img src="${creator.pfp}" alt="${creator.username}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9IiM3Yzc3YzYiLz4KPHBhdGggZD0iTTEyIDEyQzkuNzkgMTIgOCAxMC4yMSA4IDhTOS43OSA0IDEyIDRTMTYgNS43OSAxNiA4UzE0LjIxIDEyIDEyIDEyWk0xMiAxNEMxNi40MiAxNCAyMCAxNS43OSAyMCAyMFYyMkgyVjIwQzIgMTUuNzkgNS41OCAxNCAxMiAxNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo='">
-                                    <span>@${creator.username} (${(creator.royaltyBps / 100).toFixed(1)}%)</span>
-                                </div>
-                            `).join('')}
-                            ${creators.length > 3 ? `<div>+${creators.length - 3} more creators</div>` : ''}
-                        `;
-                    } else {
-                        tooltipContent = '<div>Creator information not available</div>';
-                    }
-
-                    modalHtml += `
-                        <div class="token-info" style="margin-bottom: ${index < allClaims.length - 1 ? '1rem' : '0'};">
-                            <div class="tooltip">${tooltipContent}</div>
-                            
-                            <div class="token-name">${claim.name || 'UNKNOWN'}</div>
-                            <div class="token-details">Token ${index + 1} of ${totalClaims}</div>
-                            
-                            <div class="contract-label">Contract Address</div>
-                            <div class="contract-address">${claim.address || 'Not found'}</div>
-                            
-                            <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
-                                ${claim.transaction ? `
-                                    <a href="https://solscan.io/tx/${claim.transaction}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
-                                        View Transaction
-                                    </a>
-                                ` : ''}
-                                <a href="https://bags.fm/${claim.address}" target="_blank" class="link-btn" style="font-size: 0.85rem;">
-                                    View on Bags.fm
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                modalHtml += `</div>`; // Close claims tab
-
-                // Creators Tab Content
-                modalHtml += `
-                    <div class="tab-content" id="creators-tab">
-                        <div style="margin: 1.5rem 0;">
-                            <h3 style="color: #ffffff; margin-bottom: 1rem;">Token Creators & Royalties</h3>
-                `;
-
-                allClaims.forEach((claim, index) => {
-                    const creators = claim.creators || [];
-                    
-                    modalHtml += `
-                        <div style="margin-bottom: 2rem;">
-                            <h4 style="color: #7c77c6; margin-bottom: 1rem;">${claim.name || 'UNKNOWN'} Token</h4>
-                            
-                            ${creators.length > 0 ? creators.map(creator => `
-                                <div class="creator-card">
-                                    <img src="${creator.pfp}" alt="${creator.username}" class="creator-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiM3Yzc3YzYiLz4KPHBhdGggZD0iTTI0IDI0QzIwLjY5IDI0IDE4IDE5LjMxIDE4IDE2UzIwLjY5IDggMjQgOFMyNyAxMC42OSAyNyAxNFMyNC4zMSAyNCAyNCAyNFpNMjQgMjhDMzEuNzMgMjggMzcuMzMgMzEuNTggNDAgMzhIMVY0MEM0LjY3IDMxLjU4IDEyLjI3IDI4IDI0IDI4WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'">
-                                    <div class="creator-info">
-                                        <div class="creator-name">${creator.username || 'Anonymous'}</div>
-                                        <div class="creator-username">@${creator.twitterUsername || creator.username}</div>
-                                    </div>
-                                    <div class="creator-royalty">
-                                        ${(creator.royaltyBps / 100).toFixed(1)}%
-                                        ${creator.isCreator ? '<br><small style="color: #22c55e;">Creator</small>' : ''}
-                                    </div>
-                                </div>
-                            `).join('') : `
-                                <div style="text-align: center; padding: 2rem; color: #a0a0a0;">
-                                    <p>Creator information not available for this token</p>
-                                </div>
-                            `}
-                        </div>
-                    `;
-                });
-
-                modalHtml += `</div>`; // Close creators tab
-            } else {
-                modalHtml += `
-                    <div style="margin: 1.5rem 0;">
-                        <strong style="color: #ffffff;">Wallet Address:</strong>
-                        <div class="wallet-display">${walletAddress}</div>
-                    </div>
-                    <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 16px; margin: 1.5rem 0;">
-                        <p style="color: #e5e5e5; font-size: 1.1rem;">
-                            This user has not claimed any fees from the Bags fee distribution program.
-                        </p>
-                    </div>
-                `;
-            }
+        allClaims.forEach((claim, index) => {
+            const creators = claim.creators || [];
             
             modalHtml += `
-                <div style="margin-top: 2rem; display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
-                    <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
-                        View Wallet on Solscan
-                    </a>
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #7c77c6; margin-bottom: 1rem;">${claim.name || 'UNKNOWN'} Token</h4>
+                    
+                    ${creators.length > 0 ? creators.map(creator => `
+                        <div class="creator-card">
+                            <img src="${creator.pfp}" alt="${creator.username}" class="creator-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiM3Yzc3YzYiLz4KPHBhdGggZD0iTTI0IDI0QzIwLjY5IDI0IDE4IDE5LjMxIDE4IDE2UzIwLjY5IDggMjQgOFMyNyAxMC42OSAyNyAxNFMyNC4zMSAyNCAyNCAyNFpNMjQgMjhDMzEuNzMgMjggMzcuMzMgMzEuNTggNDAgMzhIMVY0MEM0LjY3IDMxLjU4IDEyLjI3IDI4IDI0IDI4WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'">
+                            <div class="creator-info">
+                                <div class="creator-name">${creator.username || 'Anonymous'}</div>
+                                <div class="creator-username">@${creator.twitterUsername || creator.username}</div>
+                            </div>
+                            <div class="creator-royalty">
+                                ${(creator.royaltyBps / 100).toFixed(1)}%
+                                ${creator.isCreator ? '<br><small style="color: #22c55e;">Creator</small>' : ''}
+                            </div>
+                        </div>
+                    `).join('') : `
+                        <div style="text-align: center; padding: 2rem; color: #a0a0a0;">
+                            <p>Creator information not available for this token</p>
+                        </div>
+                    `}
                 </div>
             `;
+        });
 
-            showModal(modalHtml, resultType);
-        }
+        modalHtml += `</div>`; // Close creators tab
+    } else {
+        modalHtml += `
+            <div style="margin: 1.5rem 0;">
+                <strong style="color: #ffffff;">Wallet Address:</strong>
+                <div class="wallet-display">${walletAddress}</div>
+            </div>
+            <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 16px; margin: 1.5rem 0;">
+                <p style="color: #e5e5e5; font-size: 1.1rem;">
+                    This user has not claimed any fees from the Bags fee distribution program.
+                </p>
+            </div>
+        `;
+    }
+    
+    modalHtml += `
+        <div style="margin-top: 2rem; display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+            <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
+                View Wallet on Solscan
+            </a>
+        </div>
+    `;
+
+    showModal(modalHtml, resultType);
+}
 
         function showModal(content, type) {
             const modalOverlay = document.getElementById('modalOverlay');
