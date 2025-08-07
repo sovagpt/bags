@@ -657,7 +657,7 @@
                 Bags Analytics
             </div>
             <div class="nav-links">
-                <a href="#" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link" onclick="showTelegramModal()">Telegram Bot <span style="font-size: 0.7rem; opacity: 0.7;">ᶜᵒᵐᶦⁿᵍ ˢᵒᵒⁿ</span></a>
                 <a href="#" class="nav-link">Analytics</a>
                 <a href="#" class="nav-link">API</a>
             </div>
@@ -696,11 +696,46 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Main Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modal">
             <button class="modal-close" onclick="closeModal()">×</button>
             <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Telegram Bot Modal -->
+    <div class="modal-overlay" id="telegramModalOverlay">
+        <div class="modal" id="telegramModal">
+            <button class="modal-close" onclick="closeTelegramModal()">×</button>
+            <div id="telegramModalContent">
+                <div style="text-align: center; padding: 2rem 0;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🤖</div>
+                    <h2 style="color: #ffffff; margin-bottom: 1rem; font-size: 2rem;">Telegram Bot Coming Soon!</h2>
+                    <p style="color: #a0a0a0; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                        Get instant alerts when developers claim fees from Bags tokens. Stay ahead of the curve with real-time notifications!
+                    </p>
+                    
+                    <!-- Placeholder for bot preview image -->
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 2rem; margin: 2rem 0; border: 2px dashed rgba(255, 255, 255, 0.2);">
+                        <p style="color: #666; font-size: 0.9rem;">Bot Preview Image Coming Soon</p>
+                    </div>
+                    
+                    <div style="background: rgba(34, 197, 94, 0.1); border-radius: 12px; padding: 1.5rem; border-left: 4px solid #22c55e; border-right: 4px solid #22c55e;">
+                        <h3 style="color: #22c55e; margin-bottom: 0.5rem;">Features:</h3>
+                        <ul style="text-align: left; color: #e5e5e5; list-style: none; padding: 0;">
+                            <li style="margin: 0.5rem 0;">• Real-time fee claim notifications</li>
+                            <li style="margin: 0.5rem 0;">• Token creator alerts</li>
+                            <li style="margin: 0.5rem 0;">• Custom watchlists</li>
+                            <li style="margin: 0.5rem 0;">• Direct links to transactions</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="color: #7c77c6; font-weight: 600; margin-top: 2rem;">
+                        Be the first to know when it launches!
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -709,6 +744,33 @@
     </div>
 </head>
 <script>
+        // Telegram modal functions
+        function showTelegramModal() {
+            const telegramModalOverlay = document.getElementById('telegramModalOverlay');
+            telegramModalOverlay.style.display = 'flex';
+            
+            // Trigger animation
+            setTimeout(() => {
+                telegramModalOverlay.classList.add('show');
+            }, 10);
+        }
+
+        function closeTelegramModal() {
+            const telegramModalOverlay = document.getElementById('telegramModalOverlay');
+            telegramModalOverlay.classList.remove('show');
+            
+            setTimeout(() => {
+                telegramModalOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        // Close telegram modal when clicking overlay
+        document.getElementById('telegramModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTelegramModal();
+            }
+        });
+
         // Tab switching function
         function switchTab(tabName) {
             // Remove active class from all tabs and content
