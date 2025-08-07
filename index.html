@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bags.fm Analytics Dashboard</title>
+    <title>Bags.fm Activity Tracker</title>
     <style>
         * {
             margin: 0;
@@ -121,6 +121,12 @@
             color: #721c24;
         }
 
+        .result.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
         .loading {
             display: none;
             text-align: center;
@@ -142,19 +148,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .copy-btn {
-            background: #28a745;
-            padding: 8px 16px;
-            font-size: 12px;
-            margin-top: 10px;
-            width: auto;
-            display: inline-block;
-        }
-
-        .copy-btn:hover {
-            background: #218838;
-        }
-
         .wallet-display {
             word-break: break-all;
             background: #f8f9fa;
@@ -163,85 +156,116 @@
             margin: 10px 0;
             border-left: 4px solid #667eea;
             font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
         }
 
-        .user-info {
+        .activity-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin: 15px 0;
+            margin: 20px 0;
         }
 
-        .info-card {
+        .activity-card {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             border-left: 4px solid #667eea;
         }
 
-        .info-card h4 {
+        .activity-card h4 {
             color: #333;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-size: 14px;
+            display: flex;
+            align-items: center;
         }
 
-        .info-card p {
+        .activity-card p {
             color: #666;
-            font-size: 12px;
+            font-size: 13px;
             margin: 0;
         }
 
-        .status-indicator {
-            display: inline-block;
+        .status-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             margin-right: 8px;
-            background: #28a745;
+            display: inline-block;
+        }
+
+        .active { background: #28a745; }
+        .inactive { background: #6c757d; }
+        .moderate { background: #ffc107; }
+
+        .solscan-link {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .solscan-link:hover {
+            background: #0056b3;
+        }
+
+        .api-status {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #495057;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎒 Bags.fm Analytics</h1>
-            <p>Check wallet address & account status</p>
+            <h1>🎒 Bags.fm Activity Tracker</h1>
+            <p>Check if users are actively claiming their bag fees</p>
         </div>
 
-        <form id="analyticsForm">
-            <div class="form-group">
-                <label for="apiKey">Your Bags.fm API Key</label>
-                <input type="password" id="apiKey" placeholder="Enter your Bags API key" required>
-            </div>
+        <div class="api-status">
+            <strong>🔐 Secure API:</strong> Using server-side authentication
+        </div>
 
+        <form id="trackerForm">
             <div class="form-group">
                 <label for="twitterUsername">Twitter Username</label>
                 <input type="text" id="twitterUsername" placeholder="e.g., WinRAR_RARLAB (without @)" required value="WinRAR_RARLAB">
+                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                    Enter Twitter username to check their bag fee claiming activity
+                </small>
             </div>
 
-            <button type="submit">🔍 Analyze User</button>
+            <button type="submit">🔍 Check Activity</button>
         </form>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Analyzing user...</p>
+            <p>Checking wallet and activity...</p>
         </div>
 
         <div class="result" id="result"></div>
     </div>
 
     <script>
-        document.getElementById('analyticsForm').addEventListener('submit', async function(e) {
+        document.getElementById('trackerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const apiKey = document.getElementById('apiKey').value.trim();
             const twitterUsername = document.getElementById('twitterUsername').value.trim();
             const loadingEl = document.getElementById('loading');
             const resultEl = document.getElementById('result');
             const submitBtn = document.querySelector('button[type="submit"]');
             
-            if (!apiKey || !twitterUsername) {
-                showResult('Please fill in both API key and Twitter username', 'error');
+            if (!twitterUsername) {
+                showResult('Please enter a Twitter username', 'error');
                 return;
             }
 
@@ -252,109 +276,89 @@
             submitBtn.disabled = true;
 
             try {
-                console.log(`Analyzing user: ${cleanUsername}`);
+                console.log(`Checking activity for: ${cleanUsername}`);
                 
-                // Get wallet address
-                const walletUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(cleanUsername)}`;
-                
-                const walletResponse = await fetch(walletUrl, {
-                    method: 'GET',
-                    headers: {
-                        'x-api-key': apiKey
-                    }
-                });
-
+                // Step 1: Get wallet address via our serverless function
+                const walletResponse = await fetch(`/api/wallet?username=${encodeURIComponent(cleanUsername)}`);
                 const walletData = await walletResponse.json();
-                console.log('Wallet response:', walletData);
 
                 if (!walletResponse.ok || !walletData.success) {
-                    showResult(`❌ User @${cleanUsername} not found in Bags system or API error: ${walletData.error}`, 'error');
+                    showResult(`❌ @${cleanUsername} not found in Bags system: ${walletData.error || 'User has no Bags account'}`, 'error');
                     return;
                 }
 
-                const walletAddress = walletData.response;
+                const walletAddress = walletData.wallet;
+                console.log(`Found wallet: ${walletAddress}`);
 
-                // Now try to get additional data (creator info, fees, etc.)
-                const additionalData = await getAdditionalUserData(apiKey, cleanUsername, walletAddress);
+                // Step 2: Check wallet activity via Solscan API
+                const activityResponse = await fetch(`/api/activity?wallet=${encodeURIComponent(walletAddress)}`);
+                const activityData = await activityResponse.json();
 
-                displayUserAnalytics(cleanUsername, walletAddress, additionalData);
+                console.log('Activity data:', activityData);
+
+                displayActivityResults(cleanUsername, walletAddress, activityData);
 
             } catch (error) {
-                console.error('Analysis error:', error);
-                showResult(`❌ Error: ${error.message}`, 'error');
+                console.error('Tracking error:', error);
+                showResult(`❌ Error checking activity: ${error.message}`, 'error');
             } finally {
                 loadingEl.style.display = 'none';
                 submitBtn.disabled = false;
             }
         });
 
-        async function getAdditionalUserData(apiKey, username, walletAddress) {
-            const data = {
-                hasAccount: true,
-                accountAge: 'Unknown',
-                tokensCreated: 0,
-                totalFees: '0.00',
-                status: 'Active'
-            };
+        function displayActivityResults(username, walletAddress, activity) {
+            const activityLevel = determineActivityLevel(activity);
+            const statusDot = activityLevel === 'high' ? 'active' : activityLevel === 'medium' ? 'moderate' : 'inactive';
+            const statusText = activityLevel === 'high' ? 'Highly Active' : activityLevel === 'medium' ? 'Moderately Active' : 'Low Activity';
+            
+            const resultType = activityLevel === 'high' ? 'success' : activityLevel === 'medium' ? 'warning' : 'error';
 
-            try {
-                // Try to get creator information
-                // Note: This might fail if the user hasn't created tokens
-                const creatorUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/creator/v2?tokenMint=${encodeURIComponent(walletAddress)}`;
-                
-                const creatorResponse = await fetch(creatorUrl, {
-                    method: 'GET',
-                    headers: {
-                        'x-api-key': apiKey
-                    }
-                });
-
-                if (creatorResponse.ok) {
-                    const creatorData = await creatorResponse.json();
-                    console.log('Creator data:', creatorData);
-                    
-                    if (creatorData.success && creatorData.response.length > 0) {
-                        data.tokensCreated = creatorData.response.length;
-                        data.status = 'Token Creator';
-                    }
-                }
-            } catch (error) {
-                console.log('Could not fetch creator data:', error);
-            }
-
-            return data;
-        }
-
-        function displayUserAnalytics(username, walletAddress, userData) {
             showResult(`
-                <strong>✅ Analysis Complete!</strong><br><br>
+                <strong>✅ Activity Check Complete!</strong><br><br>
                 
                 <strong>User:</strong> @${username}<br>
-                <strong>Wallet Address:</strong>
+                <strong>Wallet:</strong>
                 <div class="wallet-display">${walletAddress}</div>
-                <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
                 
-                <div class="user-info">
-                    <div class="info-card">
-                        <h4><span class="status-indicator"></span>Account Status</h4>
-                        <p>${userData.status}</p>
+                <div class="activity-grid">
+                    <div class="activity-card">
+                        <h4><span class="status-dot ${statusDot}"></span>Activity Level</h4>
+                        <p>${statusText}</p>
                     </div>
-                    <div class="info-card">
-                        <h4>🚀 Tokens Created</h4>
-                        <p>${userData.tokensCreated} tokens</p>
+                    <div class="activity-card">
+                        <h4>💰 SOL Balance</h4>
+                        <p>${activity.balance} SOL</p>
                     </div>
-                    <div class="info-card">
-                        <h4>💰 Est. Total Fees</h4>
-                        <p>$${userData.totalFees}</p>
+                    <div class="activity-card">
+                        <h4>📊 Recent Transactions</h4>
+                        <p>${activity.recentTxCount} in 30 days</p>
                     </div>
-                    <div class="info-card">
-                        <h4>📅 Account Age</h4>
-                        <p>${userData.accountAge}</p>
+                    <div class="activity-card">
+                        <h4>💸 Large Claims</h4>
+                        <p>${activity.largeClaims} claims > 1 SOL</p>
                     </div>
                 </div>
                 
-                <small><strong>Note:</strong> Some data may be limited based on available API endpoints. User has an active Bags account!</small>
-            `, 'success');
+                <strong>Fee Claiming Status:</strong> ${activity.largeClaims > 0 ? '🟢 Actively claiming fees' : '🟡 Limited claiming activity'}<br><br>
+                
+                <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="solscan-link">
+                    🔍 View on Solscan
+                </a>
+                
+                <br><br>
+                <small><strong>Note:</strong> Activity is based on transaction patterns and SOL movements that indicate fee claiming behavior.</small>
+            `, resultType);
+        }
+
+        function determineActivityLevel(activity) {
+            if (activity.largeClaims >= 5 && activity.recentTxCount >= 20) {
+                return 'high';
+            } else if (activity.largeClaims >= 2 && activity.recentTxCount >= 10) {
+                return 'medium';
+            } else {
+                return 'low';
+            }
         }
 
         function showResult(message, type) {
@@ -364,37 +368,12 @@
             resultEl.style.display = 'block';
         }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                const originalBtn = event.target;
-                const originalText = originalBtn.innerHTML;
-                originalBtn.innerHTML = '✅ Copied!';
-                
-                setTimeout(() => {
-                    originalBtn.innerHTML = originalText;
-                }, 2000);
-            }).catch(err => {
-                console.error('Copy failed:', err);
-                alert('Failed to copy to clipboard');
-            });
-        }
-
-        // Save API key and username
-        const apiKeyInput = document.getElementById('apiKey');
+        // Auto-save username
         const usernameInput = document.getElementById('twitterUsername');
 
-        // Load saved data
-        if (localStorage.getItem('bags_api_key')) {
-            apiKeyInput.value = localStorage.getItem('bags_api_key');
-        }
         if (localStorage.getItem('bags_username')) {
             usernameInput.value = localStorage.getItem('bags_username');
         }
-
-        // Save on input
-        apiKeyInput.addEventListener('input', () => {
-            localStorage.setItem('bags_api_key', apiKeyInput.value);
-        });
 
         usernameInput.addEventListener('input', () => {
             localStorage.setItem('bags_username', usernameInput.value);
