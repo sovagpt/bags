@@ -174,6 +174,15 @@
             margin: 10px 0;
             border-left: 4px solid #667eea;
         }
+
+        .api-status {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -183,19 +192,17 @@
             <p>Get fee share wallet for any Twitter user</p>
         </div>
 
-        <div class="info">
-            <strong>Note:</strong> You'll need a valid bags.fm API key to use this tool. Due to CORS restrictions, this may only work when hosted on your own server or with proper proxy setup.
+        <div class="api-status">
+            <strong>✅ API Ready:</strong> Using secure environment variables for authentication
         </div>
 
         <form id="walletForm">
             <div class="form-group">
-                <label for="apiKey">API Key</label>
-                <input type="password" id="apiKey" placeholder="Enter your bags.fm API key" required>
-            </div>
-
-            <div class="form-group">
                 <label for="twitterUserId">Twitter User ID</label>
                 <input type="text" id="twitterUserId" placeholder="e.g., 123456789" required>
+                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                    Need to find a Twitter User ID? Use <a href="https://randomtools.io/find-my-twitter-id/" target="_blank">randomtools.io</a>
+                </small>
             </div>
 
             <button type="submit">🔍 Lookup Wallet</button>
@@ -210,17 +217,25 @@
     </div>
 
     <script>
+        // Get API key from environment variable (set in Vercel)
+        const API_KEY = '%BAGS_API_KEY%'; // This will be replaced by your build process
+
         document.getElementById('walletForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const apiKey = document.getElementById('apiKey').value.trim();
             const twitterUserId = document.getElementById('twitterUserId').value.trim();
             const loadingEl = document.getElementById('loading');
             const resultEl = document.getElementById('result');
             const submitBtn = document.querySelector('button[type="submit"]');
             
-            if (!apiKey || !twitterUserId) {
-                showResult('Please fill in both API key and Twitter User ID', 'error');
+            if (!twitterUserId) {
+                showResult('Please enter a Twitter User ID', 'error');
+                return;
+            }
+
+            // Check if API key is available
+            if (!API_KEY || API_KEY === '%BAGS_API_KEY%') {
+                showResult('❌ API key not configured. Please set BAGS_API_KEY environment variable in Vercel.', 'error');
                 return;
             }
 
@@ -235,8 +250,7 @@
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'x-api-key': apiKey,
-                        'Content-Type': 'application/json'
+                        'x-api-key': API_KEY
                     }
                 });
 
@@ -260,9 +274,9 @@
                 let errorMessage = 'Failed to connect to bags.fm API. ';
                 
                 if (error.message.includes('CORS')) {
-                    errorMessage += 'This is likely due to CORS restrictions. You may need to run this from your own server or use a proxy.';
+                    errorMessage += 'This is likely due to CORS restrictions.';
                 } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage += 'Please check your internet connection and API key.';
+                    errorMessage += 'Please check your internet connection.';
                 } else {
                     errorMessage += error.message;
                 }
@@ -283,7 +297,6 @@
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                // Show temporary success message
                 const originalBtn = event.target;
                 const originalText = originalBtn.innerHTML;
                 originalBtn.innerHTML = '✅ Copied!';
@@ -299,22 +312,12 @@
             });
         }
 
-        // Auto-save form data to prevent loss
-        const apiKeyInput = document.getElementById('apiKey');
+        // Auto-save Twitter User ID
         const twitterUserIdInput = document.getElementById('twitterUserId');
 
-        // Load saved data
-        if (localStorage.getItem('bags_api_key')) {
-            apiKeyInput.value = localStorage.getItem('bags_api_key');
-        }
         if (localStorage.getItem('bags_twitter_id')) {
             twitterUserIdInput.value = localStorage.getItem('bags_twitter_id');
         }
-
-        // Save data on input
-        apiKeyInput.addEventListener('input', () => {
-            localStorage.setItem('bags_api_key', apiKeyInput.value);
-        });
 
         twitterUserIdInput.addEventListener('input', () => {
             localStorage.setItem('bags_twitter_id', twitterUserIdInput.value);
