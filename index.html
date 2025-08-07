@@ -672,7 +672,7 @@ body::before {
             </div>
             <div class="nav-links">
                 <a href="#" class="nav-link" onclick="showTelegramModal()">Telegram Bot <span style="font-size: 0.7rem; opacity: 0.7;">ᶜᵒᵐᶦⁿᵍ ˢᵒᵒⁿ</span></a>
-                <a href="#" class="nav-link">Analytics</a>
+                <a href="#" class="nav-link" onclick="showLarpModal()">LARP Checker</a>
                 <a href="#" class="nav-link">API</a>
             </div>
         </nav>
@@ -717,6 +717,45 @@ body::before {
             <div id="modalContent"></div>
         </div>
     </div>
+
+        <!-- LARP Checker Modal -->
+<div class="modal-overlay" id="larpModalOverlay">
+    <div class="modal" id="larpModal">
+        <button class="modal-close" onclick="closeLarpModal()">×</button>
+        <div id="larpModalContent">
+            <div style="text-align: center; padding: 2rem 0;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🚨</div>
+                <h2 style="color: #ffffff; margin-bottom: 1rem; font-size: 2rem;">LARP Checker</h2>
+                <p style="color: #a0a0a0; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                    AI-powered analysis to detect potential red flags in token launches
+                </p>
+                
+                <form id="larpForm" style="text-align: left;">
+                    <div class="form-group">
+                        <label for="contractAddress">Token Contract Address</label>
+                        <div class="input-container">
+                            <input type="text" id="contractAddress" placeholder="Enter contract address" required>
+                        </div>
+                        <div class="input-hint">
+                            Enter a Solana token contract address to analyze
+                        </div>
+                    </div>
+                    
+                    <button type="submit" style="width: 100%;">
+                        <span>Analyze Token</span>
+                    </button>
+                </form>
+                
+                <div class="loading" id="larpLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>AI analyzing token for red flags...</p>
+                </div>
+                
+                <div id="larpResults" style="display: none; margin-top: 2rem; text-align: left;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Telegram Bot Modal -->
     <div class="modal-overlay" id="telegramModalOverlay">
@@ -1065,6 +1104,99 @@ body::before {
         usernameInput.addEventListener('input', () => {
             savedUsername = usernameInput.value;
         });
+    // LARP Checker modal functions
+function showLarpModal() {
+    const larpModalOverlay = document.getElementById('larpModalOverlay');
+    larpModalOverlay.style.display = 'flex';
+    
+    setTimeout(() => {
+        larpModalOverlay.classList.add('show');
+    }, 10);
+}
+
+function closeLarpModal() {
+    const larpModalOverlay = document.getElementById('larpModalOverlay');
+    larpModalOverlay.classList.remove('show');
+    
+    setTimeout(() => {
+        larpModalOverlay.style.display = 'none';
+    }, 300);
+}
+
+// Close larp modal when clicking overlay
+document.getElementById('larpModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLarpModal();
+    }
+});
+
+// LARP form submission
+document.getElementById('larpForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const contractAddress = document.getElementById('contractAddress').value.trim();
+    const loadingEl = document.getElementById('larpLoading');
+    const resultsEl = document.getElementById('larpResults');
+    const submitBtn = document.querySelector('#larpForm button[type="submit"]');
+    
+    if (!contractAddress) {
+        alert('Please enter a contract address');
+        return;
+    }
+
+    loadingEl.style.display = 'block';
+    resultsEl.style.display = 'none';
+    submitBtn.disabled = true;
+
+    try {
+        // Call your LARP analysis API
+        const response = await fetch(`/api/larp-check?contract=${encodeURIComponent(contractAddress)}`);
+        const data = await response.json();
+
+        if (data.success) {
+            displayLarpResults(data);
+        } else {
+            resultsEl.innerHTML = `<div style="color: #ef4444;">Error: ${data.error}</div>`;
+            resultsEl.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error('LARP check error:', error);
+        resultsEl.innerHTML = `<div style="color: #ef4444;">Analysis failed: ${error.message}</div>`;
+        resultsEl.style.display = 'block';
+    } finally {
+        loadingEl.style.display = 'none';
+        submitBtn.disabled = false;
+    }
+});
+
+function displayLarpResults(data) {
+    const resultsEl = document.getElementById('larpResults');
+    
+    const riskLevel = data.riskScore > 70 ? 'HIGH' : data.riskScore > 40 ? 'MEDIUM' : 'LOW';
+    const riskColor = data.riskScore > 70 ? '#ef4444' : data.riskScore > 40 ? '#f59e0b' : '#22c55e';
+    
+    let resultsHtml = `
+        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 2rem; margin-bottom: 2rem;">
+            <h3 style="color: ${riskColor}; margin-bottom: 1rem;">
+                Risk Level: ${riskLevel} (${data.riskScore}/100)
+            </h3>
+            <div style="color: #e5e5e5; line-height: 1.6;">
+                ${data.analysis}
+            </div>
+        </div>
+        
+        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 2rem;">
+            <h4 style="color: #ffffff; margin-bottom: 1rem;">Red Flags Detected:</h4>
+            <ul style="color: #e5e5e5; margin: 0; padding-left: 1.5rem;">
+                ${data.redFlags.map(flag => `<li style="margin: 0.5rem 0;">${flag}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    
+    resultsEl.innerHTML = resultsHtml;
+    resultsEl.style.display = 'block';
+}
     </script>
 </body>
 </html>
