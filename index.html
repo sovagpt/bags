@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bags.fm Fee Share Wallet Lookup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .copy-btn {
+            background: #28a745;
+            padding: 8px 16px;
+            font-size: 12px;
+            margin-top: 10px;
+            width: auto;
+            display: inline-block;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #495057;
+        }
+
+        .wallet-display {
+            word-break: break-all;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎒 Bags.fm Wallet Lookup</h1>
+            <p>Get fee share wallet for any Twitter user</p>
+        </div>
+
+        <div class="info">
+            <strong>Note:</strong> You'll need a valid bags.fm API key to use this tool. Due to CORS restrictions, this may only work when hosted on your own server or with proper proxy setup.
+        </div>
+
+        <form id="walletForm">
+            <div class="form-group">
+                <label for="apiKey">API Key</label>
+                <input type="password" id="apiKey" placeholder="Enter your bags.fm API key" required>
+            </div>
+
+            <div class="form-group">
+                <label for="twitterUserId">Twitter User ID</label>
+                <input type="text" id="twitterUserId" placeholder="e.g., 123456789" required>
+            </div>
+
+            <button type="submit">🔍 Lookup Wallet</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Looking up wallet...</p>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('walletForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const twitterUserId = document.getElementById('twitterUserId').value.trim();
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('result');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            
+            if (!apiKey || !twitterUserId) {
+                showResult('Please fill in both API key and Twitter User ID', 'error');
+                return;
+            }
+
+            // Show loading
+            loadingEl.style.display = 'block';
+            resultEl.style.display = 'none';
+            submitBtn.disabled = true;
+
+            try {
+                const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const walletAddress = data.response;
+                    showResult(`
+                        <strong>✅ Success!</strong><br><br>
+                        <strong>Twitter User ID:</strong> ${twitterUserId}<br>
+                        <strong>Wallet Address:</strong>
+                        <div class="wallet-display">${walletAddress}</div>
+                        <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
+                    `, 'success');
+                } else {
+                    const errorMsg = data.message || data.error || 'Unknown error occurred';
+                    showResult(`❌ Error: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                let errorMessage = 'Failed to connect to bags.fm API. ';
+                
+                if (error.message.includes('CORS')) {
+                    errorMessage += 'This is likely due to CORS restrictions. You may need to run this from your own server or use a proxy.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage += 'Please check your internet connection and API key.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                showResult(`❌ ${errorMessage}`, 'error');
+            } finally {
+                loadingEl.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showResult(message, type) {
+            const resultEl = document.getElementById('result');
+            resultEl.innerHTML = message;
+            resultEl.className = `result ${type}`;
+            resultEl.style.display = 'block';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary success message
+                const originalBtn = event.target;
+                const originalText = originalBtn.innerHTML;
+                originalBtn.innerHTML = '✅ Copied!';
+                originalBtn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    originalBtn.innerHTML = originalText;
+                    originalBtn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Auto-save form data to prevent loss
+        const apiKeyInput = document.getElementById('apiKey');
+        const twitterUserIdInput = document.getElementById('twitterUserId');
+
+        // Load saved data
+        if (localStorage.getItem('bags_api_key')) {
+            apiKeyInput.value = localStorage.getItem('bags_api_key');
+        }
+        if (localStorage.getItem('bags_twitter_id')) {
+            twitterUserIdInput.value = localStorage.getItem('bags_twitter_id');
+        }
+
+        // Save data on input
+        apiKeyInput.addEventListener('input', () => {
+            localStorage.setItem('bags_api_key', apiKeyInput.value);
+        });
+
+        twitterUserIdInput.addEventListener('input', () => {
+            localStorage.setItem('bags_twitter_id', twitterUserIdInput.value);
+        });
+    </script>
+</body>
+</html>
