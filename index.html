@@ -252,25 +252,36 @@
     </div>
 
     <script>
-        // API key will be injected by Vercel build process
-        const API_KEY = process.env.BAGS_API_KEY || 'YOUR_API_KEY_PLACEHOLDER';
-
+    <script>
         // Check API status on load
         window.addEventListener('load', checkApiStatus);
 
         async function checkApiStatus() {
             const statusEl = document.getElementById('apiStatus');
             
-            if (!API_KEY || API_KEY === 'YOUR_API_KEY_PLACEHOLDER') {
-                statusEl.innerHTML = '<strong>❌ API Key Missing:</strong> Set BAGS_API_KEY in Vercel environment variables';
-                statusEl.style.background = '#f8d7da';
-                statusEl.style.color = '#721c24';
-                return;
+            try {
+                // Test API connection through our serverless function
+                const response = await fetch('/api/analytics?twitterUsername=test&endpoint=wallet');
+                const data = await response.json();
+                
+                if (response.ok || data.error?.includes('not found')) {
+                    // API is working (even if user not found, API connection is good)
+                    statusEl.innerHTML = '<strong>✅ API Ready:</strong> Connected to Bags.fm via secure serverless function';
+                    statusEl.style.background = '#d4edda';
+                    statusEl.style.color = '#155724';
+                } else if (data.error?.includes('BAGS_API_KEY not configured')) {
+                    statusEl.innerHTML = '<strong>❌ API Key Missing:</strong> Set BAGS_API_KEY in Vercel environment variables';
+                    statusEl.style.background = '#f8d7da';
+                    statusEl.style.color = '#721c24';
+                } else {
+                    throw new Error(data.error || 'Unknown API error');
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<strong>⚠️ API Error:</strong> Could not connect to Bags.fm';
+                statusEl.style.background = '#fff3cd';
+                statusEl.style.color = '#856404';
+                console.error('API Status Check:', error);
             }
-
-            statusEl.innerHTML = '<strong>✅ API Ready:</strong> Connected to Bags.fm with environment variables';
-            statusEl.style.background = '#d4edda';
-            statusEl.style.color = '#155724';
         }
 
         document.getElementById('analyticsForm').addEventListener('submit', async function(e) {
@@ -283,11 +294,6 @@
             
             if (!twitterUsername) {
                 showResult('Please enter a Twitter username', 'error');
-                return;
-            }
-
-            if (!API_KEY || API_KEY === 'YOUR_API_KEY_PLACEHOLDER') {
-                showResult('API key not configured. Please set BAGS_API_KEY environment variable in Vercel.', 'error');
                 return;
             }
 
@@ -328,15 +334,8 @@
         });
 
         async function fetchWalletAddress(username) {
-            const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(username)}`;
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'x-api-key': API_KEY
-                }
-            });
-
+            // Use our serverless function instead of direct API calls
+            const response = await fetch(`/api/analytics?twitterUsername=${encodeURIComponent(username)}&endpoint=wallet`);
             return await response.json();
         }
 
