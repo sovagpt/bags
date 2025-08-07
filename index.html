@@ -245,7 +245,7 @@
             submitBtn.disabled = true;
 
             try {
-                // Try multiple possible endpoint URLs
+                // Try multiple possible endpoint URLs with different auth methods
                 const possibleUrls = [
                     `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
                     `https://api.bags.fm/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
@@ -253,35 +253,41 @@
                     `https://public-api.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`
                 ];
 
+                const authMethods = [
+                    { 'x-api-key': API_KEY },
+                    { 'Authorization': `Bearer ${API_KEY}` }
+                ];
+
                 let lastError = null;
                 let response = null;
                 let data = null;
 
-                // Try each URL until one works
+                // Try each URL with each auth method
                 for (const url of possibleUrls) {
-                    try {
-                        console.log(`Trying URL: ${url}`);
-                        response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${API_KEY}`
-                            }
-                        });
+                    for (const authHeaders of authMethods) {
+                        try {
+                            console.log(`Trying URL: ${url} with auth:`, Object.keys(authHeaders)[0]);
+                            response = await fetch(url, {
+                                method: 'GET',
+                                headers: authHeaders
+                            });
 
-                        if (response.ok) {
-                            data = await response.json();
-                            console.log(`Success with URL: ${url}`);
-                            break;
-                        } else {
-                            console.log(`Failed with URL: ${url} - Status: ${response.status}`);
-                            const errorText = await response.text();
-                            console.log(`Error response: ${errorText}`);
+                            if (response.ok) {
+                                data = await response.json();
+                                console.log(`Success with URL: ${url} using ${Object.keys(authHeaders)[0]}`);
+                                break;
+                            } else {
+                                console.log(`Failed with URL: ${url} - Status: ${response.status}`);
+                                const errorText = await response.text();
+                                console.log(`Error response: ${errorText.substring(0, 200)}`);
+                            }
+                        } catch (error) {
+                            console.log(`Error with URL: ${url} - ${error.message}`);
+                            lastError = error;
+                            continue;
                         }
-                    } catch (error) {
-                        console.log(`Error with URL: ${url} - ${error.message}`);
-                        lastError = error;
-                        continue;
                     }
+                    if (response && response.ok) break;
                 }
 
                 if (!response || !response.ok) {
