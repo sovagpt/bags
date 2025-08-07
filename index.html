@@ -644,74 +644,111 @@ body::before {
                 width: 95%;
             }
 
-            .cmd-modal {
-    background: #000000;
-    border: 2px solid #333333;
-    border-radius: 8px;
-    max-width: 700px;
+            /* CMD Modal Styling - Real Windows CMD Look */
+.cmd-modal {
+    background: #0c0c0c;
+    border: 1px solid #cccccc;
+    border-radius: 0; /* Remove rounded corners for authentic look */
+    max-width: 800px;
     width: 90%;
     padding: 0;
     overflow: hidden;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .cmd-window {
-    background: #000000;
-    color: #00ff00;
-    font-family: 'Courier New', monospace;
+    background: #0c0c0c;
+    color: #cccccc;
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.2;
 }
 
 .cmd-header {
-    background: #333333;
-    padding: 8px 12px;
+    background: linear-gradient(to bottom, #f0f0f0, #d0d0d0);
+    padding: 6px 8px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #555555;
+    border-bottom: 1px solid #999999;
+    min-height: 28px;
 }
 
 .cmd-buttons {
     display: flex;
-    gap: 6px;
-    margin-right: 12px;
+    gap: 2px;
+    margin-left: auto;
 }
 
 .cmd-btn {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    width: 16px;
+    height: 14px;
+    border: 1px solid #999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #333333;
+    background: linear-gradient(to bottom, #f8f8f8, #e0e0e0);
+    cursor: pointer;
 }
 
-.cmd-btn.close { background: #ff5f56; }
-.cmd-btn.minimize { background: #ffbd2e; }
-.cmd-btn.maximize { background: #27ca3f; }
+.cmd-btn.minimize::after { content: '_'; font-weight: bold; }
+.cmd-btn.maximize::after { content: '□'; font-weight: bold; }
+.cmd-btn.close::after { content: '×'; font-weight: bold; }
+
+.cmd-btn:hover {
+    background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
+}
+
+.cmd-btn.close:hover {
+    background: linear-gradient(to bottom, #ff6b6b, #ff4444);
+    color: white;
+}
 
 .cmd-title {
-    color: #ffffff;
-    font-size: 12px;
+    color: #333333;
+    font-size: 11px;
     font-weight: 400;
+    font-family: 'Segoe UI', sans-serif;
+    flex: 1;
+    padding-left: 8px;
 }
 
 .cmd-body {
-    padding: 20px;
-    min-height: 400px;
-    background: #000000;
+    padding: 8px 12px;
+    min-height: 450px;
+    background: #0c0c0c;
+    font-family: 'Consolas', 'Courier New', monospace;
 }
 
 #cmdOutput {
-    color: #00ff00;
+    color: #cccccc;
     white-space: pre-line;
+    font-size: 13px;
 }
 
 .cmd-cursor {
-    color: #00ff00;
+    color: #cccccc;
     animation: blink 1s infinite;
     display: inline-block;
+    background: #cccccc;
+    width: 8px;
+    height: 16px;
+    margin-left: 2px;
 }
 
 @keyframes blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
+}
+
+/* Green text for specific lines */
+.cmd-success {
+    color: #00ff00 !important;
+}
+
+.cmd-prompt {
+    color: #cccccc;
 }
 
             .tooltip {
@@ -1380,35 +1417,45 @@ document.getElementById('aboutModalOverlay').addEventListener('click', function(
 function startCmdAnimation() {
     const output = document.getElementById('cmdOutput');
     const commands = [
+        'Microsoft Windows [Version 10.0.19041.1052]',
+        '(c) Microsoft Corporation. All rights reserved.',
+        '',
+        'C:\\Users\\dev> cd Bags\\Analytics',
+        '',
         'C:\\Bags\\Analytics> whoami',
         'bags-fee-tracker',
         '',
-        'C:\\Bags\\Analytics> cat mission.txt',
+        'C:\\Bags\\Analytics> type mission.txt',
         'Track developer behavior on Bags.fm',
         'Expose LARPers and serial token farmers', 
         'Give traders the edge with real data',
         '',
-        'C:\\Bags\\Analytics> ls features/',
-        '✓ Fee claim detection',
-        '✓ Multi-token analysis',
-        '✓ Creator verification', 
-        '✓ LARP detection (coming soon)',
-        '✓ Telegram alerts (coming soon)',
+        'C:\\Bags\\Analytics> dir features',
+        ' Directory of C:\\Bags\\Analytics\\features',
         '',
-        'C:\\Bags\\Analytics> cat stats.txt',
+        '08/07/2025  09:00 AM    <DIR>          fee-claims',
+        '08/07/2025  09:00 AM    <DIR>          multi-token',
+        '08/07/2025  09:00 AM    <DIR>          verification', 
+        '08/07/2025  09:00 AM    <DIR>          larp-detector [COMING SOON]',
+        '08/07/2025  09:00 AM    <DIR>          telegram-bot [COMING SOON]',
+        '               0 File(s)              0 bytes',
+        '               5 Dir(s)   unlimited bytes free',
+        '',
+        'C:\\Bags\\Analytics> type stats.txt',
         'Analyzing 10,000+ wallet addresses daily',
-        'Connected to Solana mainnet',
-        'Powered by Bags.fm API + AI',
+        'Connected to Solana mainnet-beta',
+        'Powered by Bags.fm API + Claude AI',
         '',
-        'C:\\Bags\\Analytics> echo $CLAIMBAGS',
+        'C:\\Bags\\Analytics> echo %CLAIMBAGS%',
         '"Be ahead of the game"',
         '',
-        'C:\\Bags\\Analytics> contact --help',
+        'C:\\Bags\\Analytics> help contact',
         'Built by: @devclaimbags',
         'Website: devclaimbags.fm',
         'Version: 1.0.0-beta',
+        'Status: ONLINE',
         '',
-        'C:\\Bags\\Analytics> '
+        'C:\\Bags\\Analytics> _'
     ];
     
     let currentLine = 0;
@@ -1421,12 +1468,12 @@ function startCmdAnimation() {
             if (currentChar < line.length) {
                 output.innerHTML += line[currentChar];
                 currentChar++;
-                setTimeout(typeNextChar, 30); // Fast typing speed
+                setTimeout(typeNextChar, 8); // Much faster - 8ms per character
             } else {
                 output.innerHTML += '\n';
                 currentLine++;
                 currentChar = 0;
-                setTimeout(typeNextChar, currentLine < commands.length ? 150 : 0); // Pause between lines
+                setTimeout(typeNextChar, currentLine < commands.length ? 50 : 0); // Shorter pause between lines
             }
         }
     }
