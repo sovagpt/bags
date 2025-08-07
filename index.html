@@ -242,44 +242,117 @@
             submitBtn.disabled = true;
 
             try {
-                // CORRECTED ENDPOINT from Bags support: added /twitter
-                const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${encodeURIComponent(twitterUserId)}`;
+                // Try different parameter formats based on the validation error
+                const baseUrl = 'https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter';
                 
-                console.log(`Making request to: ${url}`);
+                const urlsToTry = [
+                    // Original format
+                    `${baseUrl}?twitterUserId=${encodeURIComponent(twitterUserId)}`,
+                    // Try different parameter names
+                    `${baseUrl}?twitter_user_id=${encodeURIComponent(twitterUserId)}`,
+                    `${baseUrl}?userId=${encodeURIComponent(twitterUserId)}`,
+                    `${baseUrl}?user_id=${encodeURIComponent(twitterUserId)}`,
+                    `${baseUrl}?id=${encodeURIComponent(twitterUserId)}`,
+                    // Try as path parameter
+                    `${baseUrl}/${encodeURIComponent(twitterUserId)}`
+                ];
+
                 console.log(`Twitter User ID: ${twitterUserId}`);
                 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'x-api-key': apiKey
-                    }
-                });
-
-                console.log(`Response status: ${response.status}`);
-                
-                const data = await response.json();
-                console.log(`Response data:`, data);
-
-                if (response.ok && data.success) {
-                    const walletAddress = data.response;
-                    showResult(`
-                        <strong>✅ Success!</strong><br><br>
-                        <strong>Twitter User ID:</strong> ${twitterUserId}<br>
-                        <strong>Wallet Address:</strong>
-                        <div class="wallet-display">${walletAddress}</div>
-                        <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
-                    `, 'success');
-                } else {
-                    let errorMsg = data.error || 'Unknown error occurred';
+                for (let i = 0; i < urlsToTry.length; i++) {
+                    const url = urlsToTry[i];
+                    console.log(`\nTrying format ${i + 1}: ${url}`);
                     
-                    // Provide helpful error messages
-                    if (errorMsg.includes('not found') || response.status === 404) {
-                        errorMsg = `Twitter user ${twitterUserId} not found in Bags system. They may need to create a Bags account first.`;
-                    } else if (errorMsg.includes('API key')) {
-                        errorMsg = 'Invalid API key. Please check your key from the Bags developer dashboard.';
+                    try {
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'x-api-key': apiKey,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        console.log(`Response status: ${response.status}`);
+                        
+                        const data = await response.json();
+                        console.log(`Response data:`, data);
+
+                        if (response.ok && data.success) {
+                            const walletAddress = data.response;
+                            showResult(`
+                                <strong>✅ Success!</strong><br><br>
+                                <strong>Twitter User ID:</strong> ${twitterUserId}<br>
+                                <strong>Wallet Address:</strong>
+                                <div class="wallet-display">${walletAddress}</div>
+                                <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
+                                <br><br>
+                                <small>✅ Working URL format: ${url}</small>
+                            `, 'success');
+                            return;
+                        } else if (response.status === 400) {
+                            console.log(`400 error with format ${i + 1}, trying next...`);
+                            continue; // Try next format
+                        } else {
+                            console.log(`Non-400 error: ${response.status}, stopping attempts`);
+                            break; // Different error, stop trying
+                        }
+                    } catch (fetchError) {
+                        console.log(`Fetch error for format ${i + 1}: ${fetchError.message}`);
+                        continue;
                     }
+                }
+
+                // If we get here, all formats failed
+                showResult(`
+                    <strong>❌ Parameter Format Error</strong><br><br>
+                    <strong>Issue:</strong> The API expects a string parameter but is getting undefined.<br><br>
+                    <strong>Tried formats:</strong><br>
+                    • ?twitterUserId=${twitterUserId}<br>
+                    • ?twitter_user_id=${twitterUserId}<br>
+                    • ?userId=${twitterUserId}<br>
+                    • /${twitterUserId}<br><br>
                     
-                    showResult(`❌ Error: ${errorMsg}`, 'error');
+                    <strong>Possible solutions:</strong><br>
+                    • The API might expect a different parameter name<br>
+                    • Try a POST request with JSON body<br>
+                    • Contact Bags support for the correct parameter format<br>
+                    • The endpoint documentation might still be incomplete
+                `, 'error');
+
+                // Try POST request as fallback
+                console.log('\nTrying POST request with JSON body...');
+                try {
+                    const postResponse = await fetch(baseUrl, {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            twitterUserId: twitterUserId,
+                            twitter_user_id: twitterUserId,
+                            userId: twitterUserId
+                        })
+                    });
+
+                    console.log(`POST Response status: ${postResponse.status}`);
+                    const postData = await postResponse.json();
+                    console.log(`POST Response data:`, postData);
+
+                    if (postResponse.ok && postData.success) {
+                        const walletAddress = postData.response;
+                        showResult(`
+                            <strong>✅ Success (POST)!</strong><br><br>
+                            <strong>Twitter User ID:</strong> ${twitterUserId}<br>
+                            <strong>Wallet Address:</strong>
+                            <div class="wallet-display">${walletAddress}</div>
+                            <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
+                            <br><br>
+                            <small>✅ Worked with POST request</small>
+                        `, 'success');
+                    }
+                } catch (postError) {
+                    console.log(`POST request failed: ${postError.message}`);
                 }
             } catch (error) {
                 console.error('Network Error:', error);
