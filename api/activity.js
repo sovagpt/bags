@@ -30,6 +30,150 @@ export default async function handler(req, res) {
       : 'https://api.mainnet-beta.solana.com';
     
     console.log(`Using RPC: ${rpcUrl.includes('helius') ? 'Helius' : 'Free Solana RPC'}`);
+
+    // Helper function to get token creators from Bags API
+    async function getTokenCreators(tokenAddress) {
+      try {
+        const API_KEY = process.env.BAGS_API_KEY;
+        if (!API_KEY) {
+          console.log('No Bags API key for creator lookup');
+          return null;
+        }
+
+        console.log(`👥 Looking up creators for token: ${tokenAddress}`);
+        
+        const response = await fetch(`https://public-api-v2.bags.fm/api/v1/token-launch/creator/v2?tokenMint=${tokenAddress}`, {
+          method: 'GET',
+          headers: {
+            'x-api-key': API_KEY
+          }
+        });
+
+        if (!response.ok) {
+          console.log(`Creator API failed: ${response.status}`);
+          return null;
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.response) {
+          console.log(`🎯 Found ${data.response.length} creators for ${tokenAddress}`);
+          return data.response;
+        } else {
+          console.log(`No creators found for ${tokenAddress}`);
+          return null;
+        }
+      } catch (error) {
+        console.log(`Error fetching creators: ${error.message}`);
+        return null;
+      }
+    }
+
+    // Helper function to get token info from Jupiter API
+    async function getTokenInfoFromJupiter(tokenAddress) {
+      try {
+        console.log(`🔍 Looking up token info for: ${tokenAddress}`);
+        
+        // Fetch Jupiter token list (cached for better performance)
+        const jupiterResponse = await fetch('https://token.jup.ag/strict');
+        if (!jupiterResponse.ok) {
+          throw new Error('Jupiter API failed');
+        }
+        
+        const tokens = await jupiterResponse.json();
+        const tokenInfo = tokens.find(token => token.address === tokenAddress);
+        
+        if (tokenInfo) {
+          console.log(`🎯 Found token in Jupiter: ${tokenInfo.symbol} (${tokenInfo.name})`);
+          return {
+            name: tokenInfo.symbol,
+            fullName: tokenInfo.name,
+            decimals: tokenInfo.decimals
+          };
+        } else {
+          console.log(`❌ Token not found in Jupiter list: ${tokenAddress}`);
+          return null;
+        }
+      } catch (error) {
+        console.log(`Error fetching from Jupiter: ${error.message}`);
+        return null;
+      }
+    }
+
+    // Helper function to extract token info from transaction
+    async function extractTokenInfo(transaction, meta) {
+      try {
+        const accountKeys = transaction.message.accountKeys;
+        let tokenAddress = null;
+        let tokenName = 'UNKNOWN';
+        
+        const COMMON_PROGRAMS = [
+          'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi', // Fee program
+          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',     // Token program
+          'So11111111111111111111111111111111111111112',       // WSOL
+          '11111111111111111111111111111111',                  // System program
+          'ComputeBudget111111111111111111111111111111',       // Compute budget
+        ];
+        
+        // Look for Bags token addresses (they all end with "BAGS")
+        for (const account of accountKeys) {
+          // Skip common programs and the user's wallet
+          if (!COMMON_PROGRAMS.includes(account) && account !== wallet) {
+            // Check if this is a Bags token (44 characters, ends with "BAGS")
+            if (account.length === 44 && account.endsWith('BAGS')) {
+              tokenAddress = account;
+              console.log(`🎯 Found Bags token address: ${tokenAddress}`);
+              break;
+            }
+          }
+        }
+        
+        // If we found a token address, get its name from Jupiter API
+        if (tokenAddress) {
+          const jupiterInfo = await getTokenInfoFromJupiter(tokenAddress);
+          if (jupiterInfo) {
+            tokenName = jupiterInfo.name;
+          } else {
+            // Fallback: try to extract from address as before
+            const addressWithoutBags = tokenAddress.slice(0, -4);
+            const upperCaseMatches = addressWithoutBags.match(/[A-Z]{2,6}/g);
+            if (upperCaseMatches && upperCaseMatches.length > 0) {
+              tokenName = upperCaseMatches[upperCaseMatches.length - 1];
+            } else {
+              tokenName = tokenAddress.substring(0, 3).toUpperCase();
+            }
+          }
+
+          // Get creator information
+          const creators = await getTokenCreators(tokenAddress);
+          
+          return {
+            address: tokenAddress,
+            name: tokenName,
+            creators: creators
+          };
+        }
+        
+        // If no BAGS token found, log all accounts for debugging
+        if (!tokenAddress) {
+          console.log(`🔍 No BAGS token found. All non-program accounts:`, 
+            accountKeys.filter(acc => !COMMON_PROGRAMS.includes(acc) && acc !== wallet));
+        }
+        
+        return {
+          address: null,
+          name: 'UNKNOWN',
+          creators: null
+        };
+      } catch (error) {
+        console.log('Error extracting token info:', error.message);
+        return {
+          address: null,
+          name: 'UNKNOWN',
+          creators: null
+        };
+      }
+    }
     
     // Get wallet's transaction signatures
     console.log('Getting wallet transaction signatures...');
@@ -60,56 +204,6 @@ export default async function handler(req, res) {
         checkedTransactions: 0,
         method: 'balance_changes_check'
       });
-    }
-    
-    // Helper function to extract token info from transaction
-    function extractTokenInfo(transaction, meta) {
-      try {
-        const accountKeys = transaction.message.accountKeys;
-        let tokenAddress = null;
-        
-        // Look for token mints in the account keys (excluding SOL and common programs)
-        const COMMON_PROGRAMS = [
-          'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi', // Fee program
-          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',     // Token program
-          'So11111111111111111111111111111111111111112',       // WSOL
-          '11111111111111111111111111111111',                  // System program
-          'ComputeBudget111111111111111111111111111111',       // Compute budget
-        ];
-        
-        // Find Bags token addresses (they all end with "BAGS")
-        for (const account of accountKeys) {
-          // Skip common programs and the user's wallet
-          if (!COMMON_PROGRAMS.includes(account) && account !== wallet) {
-            // Check if this is a Bags token (44 characters, ends with "BAGS")
-            if (account.length === 44 && account.endsWith('BAGS')) {
-              tokenAddress = account;
-              console.log(`🎯 Found Bags token address: ${tokenAddress}`);
-              break; // Use the first one we find
-            }
-          }
-        }
-        
-        // If no BAGS token found, log all accounts for debugging
-        if (!tokenAddress) {
-          console.log(`🔍 No BAGS token found. All accounts in transaction:`, accountKeys.filter(acc => !COMMON_PROGRAMS.includes(acc) && acc !== wallet));
-        }
-        
-        return {
-          address: tokenAddress,
-          name: null, // We'll set this in frontend for now
-          amount: null, // We'll set this in frontend for now
-          usdValue: null // We'll set this in frontend for now
-        };
-      } catch (error) {
-        console.log('Error extracting token info:', error.message);
-        return {
-          address: null,
-          name: null,
-          amount: null,
-          usdValue: null
-        };
-      }
     }
     
     // Now check each transaction for balance changes and fee program involvement
@@ -218,16 +312,17 @@ export default async function handler(req, res) {
           if (hasPositiveBalanceChange) {
             foundClaim = true;
             
-            // Extract token information from this transaction
+            // Extract token information from this transaction (including creators)
             const tokenInfo = await extractTokenInfo(transaction, meta);
             console.log(`🪙 Extracted token info:`, tokenInfo);
-            
+
             if (tokenInfo.address) {
               claimTransactions.push(sig.signature);
               allTokenInfo.push({
                 address: tokenInfo.address,
                 name: tokenInfo.name,
-                transaction: sig.signature
+                transaction: sig.signature,
+                creators: tokenInfo.creators
               });
             }
             
@@ -278,7 +373,7 @@ export default async function handler(req, res) {
       // Primary claim data
       tokenAddress: primaryClaim?.address || null,
       tokenName: primaryClaim?.name || null,
-      // All unique claims data
+      // All unique claims data (now with creators)
       allClaims: uniqueClaims,
       totalClaims: uniqueClaims.length
     });
