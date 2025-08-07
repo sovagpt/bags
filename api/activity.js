@@ -36,7 +36,7 @@ export default async function handler(req, res) {
         jsonrpc: '2.0',
         id: 1,
         method: 'getSignaturesForAddress',
-        params: [wallet, { limit: 20 }] // Start with just 20
+        params: [wallet, { limit: 100 }] // Increased to check more transactions
       })
     });
     
@@ -57,8 +57,8 @@ export default async function handler(req, res) {
       });
     }
     
-    // Check just the first few transactions to avoid timeouts
-    const signatures = signaturesData.result.slice(0, 5);
+    // Check more transactions to find fee claims
+    const signatures = signaturesData.result.slice(0, 20); // Increased from 5 to 20
     const allPrograms = [];
     let foundProgram = false;
     let foundInTx = null;
