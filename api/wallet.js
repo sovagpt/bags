@@ -1,4 +1,4 @@
-// /api/wallet.js - Optional Vercel serverless function (if CORS issues persist)
+// /api/analytics.js - Vercel serverless function for analytics
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,23 +15,56 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { twitterUserId, apiKey } = req.query;
+  const { twitterUsername, endpoint } = req.query;
 
-  if (!twitterUserId || !apiKey) {
+  if (!twitterUsername) {
     return res.status(400).json({ 
       success: false, 
-      error: 'twitterUserId and apiKey parameters are required' 
+      error: 'twitterUsername parameter is required' 
+    });
+  }
+
+  const API_KEY = process.env.BAGS_API_KEY;
+  
+  if (!API_KEY) {
+    return res.status(500).json({
+      success: false,
+      error: 'BAGS_API_KEY not configured in environment variables'
     });
   }
 
   try {
-    // CORRECTED ENDPOINT from Bags support: /wallet/twitter
-    const bagsUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${encodeURIComponent(twitterUserId)}`;
+    let apiUrl;
     
-    const response = await fetch(bagsUrl, {
+    // Route to different Bags API endpoints
+    switch (endpoint) {
+      case 'wallet':
+        apiUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(twitterUsername)}`;
+        break;
+      case 'creator':
+        // For getting creator info - requires tokenMint parameter
+        const { tokenMint } = req.query;
+        if (!tokenMint) {
+          return res.status(400).json({ success: false, error: 'tokenMint required for creator endpoint' });
+        }
+        apiUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/creator/v2?tokenMint=${encodeURIComponent(tokenMint)}`;
+        break;
+      case 'lifetime-fees':
+        // For getting lifetime fees - requires tokenMint parameter
+        const { tokenMint: feeTokenMint } = req.query;
+        if (!feeTokenMint) {
+          return res.status(400).json({ success: false, error: 'tokenMint required for lifetime-fees endpoint' });
+        }
+        apiUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/lifetime-fees?tokenMint=${encodeURIComponent(feeTokenMint)}`;
+        break;
+      default:
+        apiUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(twitterUsername)}`;
+    }
+    
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'x-api-key': apiKey
+        'x-api-key': API_KEY
       }
     });
 
@@ -49,7 +82,7 @@ export default async function handler(req, res) {
     console.error('Bags API Error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch wallet address'
+      error: 'Failed to fetch data from Bags API'
     });
   }
 }
