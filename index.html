@@ -669,12 +669,11 @@
             const hasClaimed = data.hasInteracted === true;
             const resultType = hasClaimed ? 'success' : 'error';
             
-            // For now, we'll extract token info from the backend data if available
-            // You can modify the backend to return specific token information
-            const tokenName = 'XAI'; // This would come from your backend data
-            const tokenAmount = '1.46242534'; // This would come from your backend data
-            const usdValue = '$244.62'; // This would come from your backend data
-            const contractAddress = 'So11111111111111111111111111111111111111112'; // This would come from your backend data
+            // Use real data from backend, with fallbacks
+            const tokenName = data.tokenName || 'XAI'; // Fallback to XAI for now
+            const tokenAmount = data.claimAmount || '1.46242534'; // Fallback amount
+            const usdValue = data.usdValue || '$244.62'; // Fallback USD value
+            const contractAddress = data.tokenAddress || 'So11111111111111111111111111111111111111112'; // Use real address from backend
             
             let modalHtml = `
                 <div class="claim-status">
