@@ -1,4 +1,4 @@
-// /api/activity.js - Check wallet fee claims using Solscan API v2
+// /api/activity.js - Debug and find correct fee program interactions
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,12 +31,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(`Checking fee claims for wallet: ${wallet}`);
+    console.log(`Debugging fee claims for wallet: ${wallet}`);
     
-    // Target the specific fee program for Bags.fm claims
+    // First, let's get ALL recent transactions to see what programs are involved
+    const allTxUrl = `https://api.solscan.io/v2/account/transactions?address=${wallet}&limit=50`;
+    
+    const allTxResponse = await fetch(allTxUrl, {
+      headers: {
+        'Authorization': `Bearer ${SOLSCAN_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const allTxData = await allTxResponse.json();
+    console.log('All transactions response:', allTxData);
+    
+    // Analyze all transactions to find fee-related ones
+    const analysis = await debugTransactions(allTxData, wallet, SOLSCAN_API_KEY);
+    
+    // Also try the specific fee program (in case it exists)
     const FEE_PROGRAM = 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
+    const specificFeeUrl = `https://api.solscan.io/v2/account/transactions?address=${wallet}&program=${FEE_PROGRAM}&limit=20`;
     
-    // Get wallet's current balance
+    const specificResponse = await fetch(specificFeeUrl, {
+      headers: {
+        'Authorization': `Bearer ${SOLSCAN_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const specificData = await specificResponse.json();
+    console.log('Specific fee program response:', specificData);
+    
+    // Get wallet balance
     const balanceUrl = `https://api.solscan.io/v2/account?address=${wallet}`;
     const balanceResponse = await fetch(balanceUrl, {
       headers: {
@@ -46,68 +73,50 @@ export default async function handler(req, res) {
     });
     
     const balanceData = await balanceResponse.json();
-    console.log('Balance response:', balanceData);
     
-    // Get all transactions between this wallet and the fee program
-    const feeClaimsUrl = `https://api.solscan.io/v2/account/transactions?address=${wallet}&program=${FEE_PROGRAM}&limit=50`;
-    
-    const feeResponse = await fetch(feeClaimsUrl, {
-      headers: {
-        'Authorization': `Bearer ${SOLSCAN_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    const feeData = await feeResponse.json();
-    console.log('Fee claims response:', feeData);
-    
-    // Analyze the fee claim transactions
-    const analysis = await analyzeFeeClaimTransactions(feeData, wallet, SOLSCAN_API_KEY);
-    
-    // Add balance info
     analysis.balance = balanceData?.data?.lamports ? 
       (balanceData.data.lamports / 1e9).toFixed(4) : '0.0000';
+    
+    analysis.specificProgramCheck = {
+      found: specificData?.data?.length > 0,
+      count: specificData?.data?.length || 0,
+      program: FEE_PROGRAM
+    };
     
     return res.status(200).json(analysis);
     
   } catch (error) {
-    console.error('Fee claim check error:', error);
+    console.error('Debug error:', error);
     
     return res.status(200).json({
       balance: '0.0000',
-      totalFeeClaims: 0,
-      totalClaimedSOL: '0.000000',
-      totalClaimedUSD: '0.00',
-      lastClaim: null,
-      claimDetails: [],
-      avgClaimSize: '0.0000',
-      claimFrequency: 'No claims',
-      error: `Failed to fetch data: ${error.message}`,
+      error: `Debug failed: ${error.message}`,
+      debugInfo: 'Could not fetch transaction data',
       dataSource: 'error'
     });
   }
 }
 
-async function analyzeFeeClaimTransactions(feeData, wallet, apiKey) {
-  if (!feeData?.data || !Array.isArray(feeData.data)) {
+async function debugTransactions(allTxData, wallet, apiKey) {
+  if (!allTxData?.data || !Array.isArray(allTxData.data)) {
     return {
-      totalFeeClaims: 0,
-      totalClaimedSOL: '0.000000',
-      totalClaimedUSD: '0.00',
-      lastClaim: null,
-      claimDetails: [],
-      avgClaimSize: '0.0000',
-      claimFrequency: 'No claims'
+      totalTransactions: 0,
+      programsFound: [],
+      potentialFeeClaims: [],
+      debugInfo: 'No transaction data available'
     };
   }
   
-  const claims = [];
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const programs = new Set();
+  const potentialClaims = [];
+  const debugInfo = [];
   
-  // Process each transaction to get detailed claim info
-  for (const tx of feeData.data.slice(0, 20)) { // Limit to prevent rate limits
+  console.log(`Processing ${allTxData.data.length} transactions...`);
+  
+  // Process recent transactions to find patterns
+  for (const tx of allTxData.data.slice(0, 20)) {
     try {
-      // Get transaction details to see actual amounts
+      // Get detailed transaction info
       const txDetailUrl = `https://api.solscan.io/v2/transaction?signature=${tx.signature}`;
       
       const txDetailResponse = await fetch(txDetailUrl, {
@@ -120,113 +129,94 @@ async function analyzeFeeClaimTransactions(feeData, wallet, apiKey) {
       const txDetail = await txDetailResponse.json();
       
       if (txDetail?.data) {
-        const claimInfo = extractClaimInfo(txDetail.data, wallet, tx.blockTime);
-        if (claimInfo && claimInfo.solAmount > 0) {
-          claims.push(claimInfo);
+        // Look for programs
+        if (txDetail.data.instructions) {
+          txDetail.data.instructions.forEach(instruction => {
+            if (instruction.programId) {
+              programs.add(instruction.programId);
+            }
+          });
+        }
+        
+        // Look for balance changes that might be fee claims
+        const claimData = analyzeForFeePattern(txDetail.data, wallet, tx.blockTime);
+        if (claimData) {
+          potentialClaims.push(claimData);
+        }
+        
+        // Debug info for first few transactions
+        if (potentialClaims.length < 5) {
+          debugInfo.push({
+            signature: tx.signature,
+            blockTime: tx.blockTime,
+            programs: txDetail.data.instructions?.map(i => i.programId) || [],
+            hasBalanceChange: txDetail.data.balanceChanges?.some(bc => bc.address === wallet),
+            solChangeAmount: txDetail.data.balanceChanges?.find(bc => bc.address === wallet)?.changeAmount || 0
+          });
         }
       }
       
       // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
     } catch (error) {
       console.log(`Error processing tx ${tx.signature}:`, error);
     }
   }
   
-  // Calculate statistics
-  const recentClaims = claims.filter(claim => claim.timestamp > thirtyDaysAgo);
-  const totalSOL = claims.reduce((sum, claim) => sum + claim.solAmount, 0);
-  const totalUSD = totalSOL * 167; // Approximate SOL price
-  
-  // Calculate claim frequency
-  let frequency = 'No claims';
-  if (claims.length > 0) {
-    const daysSinceFirst = (Date.now() - claims[claims.length - 1].timestamp) / (1000 * 60 * 60 * 24);
-    const claimsPerDay = claims.length / daysSinceFirst;
-    
-    if (claimsPerDay > 0.5) frequency = 'Very Active (>0.5/day)';
-    else if (claimsPerDay > 0.1) frequency = 'Active (~weekly)';
-    else if (claimsPerDay > 0.03) frequency = 'Occasional (~monthly)';
-    else frequency = 'Rare';
-  }
+  // Look for fee-related program patterns
+  const feePrograms = Array.from(programs).filter(program => 
+    program.includes('FEE') || 
+    program.includes('fee') ||
+    program.includes('Fee') ||
+    program.includes('Claim') ||
+    program.includes('claim')
+  );
   
   return {
-    totalFeeClaims: claims.length,
-    recentClaims: recentClaims.length,
-    totalClaimedSOL: totalSOL.toFixed(6),
-    totalClaimedUSD: totalUSD.toFixed(2),
-    lastClaim: claims.length > 0 ? new Date(claims[0].timestamp).toISOString() : null,
-    claimDetails: claims.slice(0, 10), // Most recent 10
-    avgClaimSize: claims.length > 0 ? (totalSOL / claims.length).toFixed(4) : '0.0000',
-    claimFrequency: frequency,
-    dataSource: 'solscan_v2'
+    totalTransactions: allTxData.data.length,
+    totalPrograms: programs.size,
+    allPrograms: Array.from(programs),
+    feePrograms: feePrograms,
+    potentialFeeClaims: potentialClaims,
+    totalClaimedSOL: potentialClaims.reduce((sum, claim) => sum + claim.solAmount, 0).toFixed(6),
+    debugInfo: debugInfo,
+    lastAnalyzed: new Date().toISOString()
   };
 }
 
-function extractClaimInfo(txDetail, wallet, blockTime) {
-  try {
-    // Look for SOL balance changes for our wallet
-    const balanceChanges = txDetail.balanceChanges || [];
-    const walletChange = balanceChanges.find(change => 
-      change.address === wallet && change.changeType === 'increase'
+function analyzeForFeePattern(txDetail, wallet, blockTime) {
+  // Look for balance increases that might be fee claims
+  if (txDetail.balanceChanges) {
+    const walletChange = txDetail.balanceChanges.find(change => 
+      change.address === wallet && 
+      change.changeType === 'increase' &&
+      Math.abs(change.changeAmount) > 1000000 // More than 0.001 SOL
     );
     
     if (walletChange) {
       const solAmount = Math.abs(walletChange.changeAmount) / 1e9;
       
-      return {
-        signature: txDetail.signature,
-        timestamp: blockTime * 1000,
-        solAmount: solAmount,
-        usdValue: solAmount * 167,
-        type: 'fee_claim',
-        program: 'Bags Fee Program'
-      };
-    }
-    
-    // Fallback: look in instruction data
-    if (txDetail.instructions) {
-      for (const instruction of txDetail.instructions) {
-        if (instruction.accounts?.includes(wallet)) {
-          // Look for SOL transfers to our wallet
-          const solAmount = extractSOLFromInstruction(instruction, wallet);
-          if (solAmount > 0) {
-            return {
-              signature: txDetail.signature,
-              timestamp: blockTime * 1000,
-              solAmount: solAmount,
-              usdValue: solAmount * 167,
-              type: 'fee_claim',
-              program: 'Bags Fee Program'
-            };
-          }
-        }
+      // Check if it's from a potential fee program
+      const involvedPrograms = txDetail.instructions?.map(i => i.programId) || [];
+      const isLikelyFeeClaim = involvedPrograms.some(program => 
+        program !== '11111111111111111111111111111111' && // Not system program
+        program !== 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' // Not token program
+      );
+      
+      if (isLikelyFeeClaim && solAmount > 0.001) {
+        return {
+          signature: txDetail.signature,
+          timestamp: blockTime * 1000,
+          solAmount: solAmount,
+          usdValue: solAmount * 167,
+          programs: involvedPrograms,
+          balanceChange: walletChange.changeAmount,
+          type: 'potential_fee_claim'
+        };
       }
     }
-    
-    return null;
-    
-  } catch (error) {
-    console.log('Error extracting claim info:', error);
-    return null;
-  }
-}
-
-function extractSOLFromInstruction(instruction, wallet) {
-  // Try to extract SOL amount from instruction data
-  if (instruction.parsed?.info?.lamports) {
-    return instruction.parsed.info.lamports / 1e9;
   }
   
-  if (instruction.data?.lamports) {
-    return instruction.data.lamports / 1e9;
-  }
-  
-  // Look for transfers in instruction
-  if (instruction.parsed?.info?.destination === wallet) {
-    return (instruction.parsed.info.lamports || 0) / 1e9;
-  }
-  
-  return 0;
+  return null;
 }
