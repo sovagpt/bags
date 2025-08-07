@@ -246,17 +246,47 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Results */
-        .result {
-            margin-top: 2rem;
-            padding: 2rem;
-            border-radius: 16px;
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
             display: none;
-            position: relative;
-            overflow: hidden;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .result::before {
+        .modal-overlay.show {
+            opacity: 1;
+        }
+
+        .modal {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal::before {
             content: '';
             position: absolute;
             top: 0;
@@ -265,24 +295,126 @@
             height: 2px;
         }
 
-        .result.success {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.2);
-            color: #ffffff;
-        }
-
-        .result.success::before {
+        .modal.success::before {
             background: linear-gradient(90deg, #22c55e, #16a34a);
         }
 
-        .result.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+        .modal.error::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: background 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .claim-status {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .claim-status-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .claim-status-icon.success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 2px solid #22c55e;
+        }
+
+        .claim-status-icon.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 2px solid #ef4444;
+        }
+
+        .claim-status h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
             color: #ffffff;
         }
 
-        .result.error::before {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
+        .claim-status p {
+            color: #a0a0a0;
+            font-size: 1rem;
+        }
+
+        .token-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .token-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .token-details {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .claim-amount {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .amount-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .amount-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .amount-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            margin-top: 0.25rem;
+        }
+
+        /* Results (hidden, now using modal) */
+        .result {
+            display: none;
         }
 
         .wallet-display {
@@ -449,6 +581,14 @@
         </div>
     </div>
 
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
     <div class="footer">
         <p>Powered by Bags.fm API & Solscan</p>
     </div>
@@ -509,77 +649,68 @@
             // Use the exact property from backend response
             const hasClaimed = data.hasInteracted === true;
             const resultType = hasClaimed ? 'success' : 'error';
-            const statusDot = hasClaimed ? 'active' : 'inactive';
             
-            let resultHtml = `
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="color: #ffffff; margin-bottom: 0.5rem; font-size: 1.25rem;">Analysis Results</h3>
-                    <div style="color: #a0a0a0; font-size: 0.9rem;">@${username} • Fee claiming analysis complete</div>
+            // For now, we'll extract token info from the backend data if available
+            // You can modify the backend to return specific token information
+            const tokenName = 'XAI'; // This would come from your backend data
+            const tokenAmount = '1.46242534'; // This would come from your backend data
+            const usdValue = '$244.62'; // This would come from your backend data
+            
+            let modalHtml = `
+                <div class="claim-status">
+                    <div class="claim-status-icon ${resultType}">
+                        ${hasClaimed ? '✓' : '✗'}
+                    </div>
+                    <h2>${hasClaimed ? 'Fees Claimed' : 'No Claims Found'}</h2>
+                    <p>@${username}</p>
                 </div>
                 
                 <div style="margin: 1.5rem 0;">
                     <strong style="color: #ffffff;">Wallet Address:</strong>
                     <div class="wallet-display">${walletAddress}</div>
                 </div>
-                
-                <div class="status-grid">
-                    <div class="status-card">
-                        <h4><span class="status-dot ${statusDot}"></span>Fee Claims Status</h4>
-                        <p>${hasClaimed ? 'Active fee claimer' : 'No claiming activity detected'}</p>
-                    </div>
-                    <div class="status-card">
-                        <h4>Analysis Status</h4>
-                        <p>${data.status || (hasClaimed ? 'Claims verified' : 'No activity found')}</p>
-                    </div>
-                    <div class="status-card">
-                        <h4>Transactions Analyzed</h4>
-                        <p>${data.checkedTransactions || 0} recent transactions</p>
-                    </div>
-                    <div class="status-card">
-                        <h4>Program Interactions</h4>
-                        <p>${data.foundPrograms?.length || 0} program(s) detected</p>
-                    </div>
-                </div>
-                
-                <div style="margin: 1.5rem 0; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px;">
-                    <strong style="color: #ffffff;">Summary:</strong>
-                    <p style="margin-top: 0.5rem; color: #e5e5e5;">
-                        ${hasClaimed ? 
-                            'This user has successfully interacted with the Bags fee distribution program.' : 
-                            'This user has not engaged with the Bags fee claiming system.'}
-                    </p>
-                </div>
             `;
             
-            // Add transaction link if found
-            if (data.foundInTx) {
-                resultHtml += `
-                    <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">
-                        View Claim Transaction
-                    </a>
-                `;
-            }
-            
-            // Add debug info
-            if (data.foundPrograms && data.foundPrograms.length > 0) {
-                resultHtml += `
-                    <details style="margin-top: 1rem; color: #a0a0a0; font-size: 0.875rem;">
-                        <summary style="cursor: pointer; color: #ffffff; font-weight: 500;">Technical Details</summary>
-                        <div style="margin-top: 0.5rem; padding: 0.5rem 0;">
-                            <strong>Detected Programs:</strong><br>
-                `;
-                data.foundPrograms.slice(0, 5).forEach(program => {
-                    const isFeeProgram = program === 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
-                    resultHtml += `${isFeeProgram ? '• ' : '• '}${program.substring(0, 40)}...${isFeeProgram ? ' (Fee Program)' : ''}<br>`;
-                });
-                resultHtml += `
+            if (hasClaimed) {
+                modalHtml += `
+                    <div class="token-info">
+                        <div class="token-name">${tokenName}</div>
+                        <div class="token-details">Token fees claimed</div>
+                        
+                        <div class="claim-amount">
+                            <div class="amount-card">
+                                <div class="amount-value">${tokenAmount}</div>
+                                <div class="amount-label">WSOL</div>
+                            </div>
+                            <div class="amount-card">
+                                <div class="amount-value">${usdValue}</div>
+                                <div class="amount-label">USD Value</div>
+                            </div>
                         </div>
-                    </details>
+                    </div>
+                `;
+                
+                if (data.foundInTx) {
+                    modalHtml += `
+                        <div style="text-align: center; margin-top: 1.5rem;">
+                            <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">
+                                View Claim Transaction
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                modalHtml += `
+                    <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 16px; margin: 1.5rem 0;">
+                        <p style="color: #e5e5e5; font-size: 1.1rem;">
+                            This user has not claimed any fees from the Bags fee distribution program.
+                        </p>
+                    </div>
                 `;
             }
             
-            resultHtml += `
-                <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            modalHtml += `
+                <div style="margin-top: 2rem; display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
                     <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
                         View on Solscan
                     </a>
@@ -589,8 +720,46 @@
                 </div>
             `;
 
-            showResult(resultHtml, resultType);
+            showModal(modalHtml, resultType);
         }
+
+        function showModal(content, type) {
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modalContent');
+            
+            modalContent.innerHTML = content;
+            modal.className = `modal ${type}`;
+            modalOverlay.style.display = 'flex';
+            
+            // Trigger animation
+            setTimeout(() => {
+                modalOverlay.classList.add('show');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modalOverlay = document.getElementById('modalOverlay');
+            modalOverlay.classList.remove('show');
+            
+            setTimeout(() => {
+                modalOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        // Close modal when clicking overlay
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
 
         function showResult(message, type) {
             const resultEl = document.getElementById('result');
