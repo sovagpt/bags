@@ -245,16 +245,48 @@
             submitBtn.disabled = true;
 
             try {
-                const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`;
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'x-api-key': API_KEY
-                    }
-                });
+                // Try multiple possible endpoint URLs
+                const possibleUrls = [
+                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
+                    `https://api.bags.fm/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
+                    `https://bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
+                    `https://public-api.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`
+                ];
 
-                const data = await response.json();
+                let lastError = null;
+                let response = null;
+                let data = null;
+
+                // Try each URL until one works
+                for (const url of possibleUrls) {
+                    try {
+                        console.log(`Trying URL: ${url}`);
+                        response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'x-api-key': API_KEY
+                            }
+                        });
+
+                        if (response.ok) {
+                            data = await response.json();
+                            console.log(`Success with URL: ${url}`);
+                            break;
+                        } else {
+                            console.log(`Failed with URL: ${url} - Status: ${response.status}`);
+                            const errorText = await response.text();
+                            console.log(`Error response: ${errorText}`);
+                        }
+                    } catch (error) {
+                        console.log(`Error with URL: ${url} - ${error.message}`);
+                        lastError = error;
+                        continue;
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw lastError || new Error(`All API endpoints failed. Last status: ${response?.status || 'Unknown'}`);
+                }
 
                 if (response.ok && data.success) {
                     const walletAddress = data.response;
