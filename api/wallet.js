@@ -1,4 +1,4 @@
-// /api/wallet.js - Vercel serverless function
+// /api/wallet.js - Optional Vercel serverless function (if CORS issues persist)
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,23 +15,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { twitterUserId } = req.query;
+  const { twitterUserId, apiKey } = req.query;
 
-  if (!twitterUserId) {
+  if (!twitterUserId || !apiKey) {
     return res.status(400).json({ 
       success: false, 
-      error: 'twitterUserId parameter is required' 
+      error: 'twitterUserId and apiKey parameters are required' 
     });
   }
 
   try {
-    // CORRECTED ENDPOINT PATH from Bags support!
+    // CORRECTED ENDPOINT from Bags support: /wallet/twitter
     const bagsUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${encodeURIComponent(twitterUserId)}`;
     
     const response = await fetch(bagsUrl, {
       method: 'GET',
       headers: {
-        'x-api-key': process.env.BAGS_API_KEY || 'YOUR_API_KEY_HERE'  // Don't commit real key
+        'x-api-key': apiKey
       }
     });
 
