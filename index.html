@@ -405,7 +405,10 @@
 <body>
     <div class="header">
         <nav class="nav">
-            <div class="logo">🎒 Bags Analytics</div>
+            <div class="logo">
+                <img src="https://cdn.prod.website-files.com/6740d85c4e3daeef29a89470/689437c7dfaa854544093c3d_688eec4a9dc2bb9ca5c7bcdb_bags-icon%20(1).png" alt="Bags" style="height: 24px; width: auto; margin-right: 8px; vertical-align: middle;">
+                Bags Analytics
+            </div>
             <div class="nav-links">
                 <a href="#" class="nav-link">Dashboard</a>
                 <a href="#" class="nav-link">Analytics</a>
@@ -414,7 +417,7 @@
         </nav>
 
         <div class="hero">
-            <h1>Fee Claim Intelligence</h1>
+            <h1>Did Dev Claim Bags</h1>
             <p>Advanced analytics for Bags.fm fee distribution tracking. Monitor user engagement and claiming patterns in real-time.</p>
         </div>
     </div>
@@ -433,7 +436,7 @@
                 </div>
 
                 <button type="submit">
-                    <span>🔍 Analyze Fee Claims</span>
+                    <span>Analyze Fee Claims</span>
                 </button>
             </form>
 
@@ -447,7 +450,7 @@
     </div>
 
     <div class="footer">
-        <p>Powered by Solana blockchain analytics • Built with precision</p>
+        <p>Powered by Bags.fm API & Solscan</p>
     </div>
 
     <script>
@@ -478,7 +481,7 @@
                 const walletData = await walletResponse.json();
 
                 if (!walletResponse.ok || !walletData.success) {
-                    showResult(`❌ @${cleanUsername} not found in Bags system: ${walletData.error || 'User has no Bags account'}`, 'error');
+                    showResult(`@${cleanUsername} not found in Bags system: ${walletData.error || 'User has no Bags account'}`, 'error');
                     return;
                 }
 
@@ -495,7 +498,7 @@
 
             } catch (error) {
                 console.error('Check error:', error);
-                showResult(`❌ Analysis failed: ${error.message}`, 'error');
+                showResult(`Analysis failed: ${error.message}`, 'error');
             } finally {
                 loadingEl.style.display = 'none';
                 submitBtn.disabled = false;
@@ -525,15 +528,15 @@
                         <p>${hasClaimed ? 'Active fee claimer' : 'No claiming activity detected'}</p>
                     </div>
                     <div class="status-card">
-                        <h4>📊 Analysis Status</h4>
+                        <h4>Analysis Status</h4>
                         <p>${data.status || (hasClaimed ? 'Claims verified' : 'No activity found')}</p>
                     </div>
                     <div class="status-card">
-                        <h4>🔍 Transactions Analyzed</h4>
+                        <h4>Transactions Analyzed</h4>
                         <p>${data.checkedTransactions || 0} recent transactions</p>
                     </div>
                     <div class="status-card">
-                        <h4>🎯 Program Interactions</h4>
+                        <h4>Program Interactions</h4>
                         <p>${data.foundPrograms?.length || 0} program(s) detected</p>
                     </div>
                 </div>
@@ -542,8 +545,8 @@
                     <strong style="color: #ffffff;">Summary:</strong>
                     <p style="margin-top: 0.5rem; color: #e5e5e5;">
                         ${hasClaimed ? 
-                            '🟢 This user has successfully interacted with the Bags fee distribution program.' : 
-                            '🔴 This user has not engaged with the Bags fee claiming system.'}
+                            'This user has successfully interacted with the Bags fee distribution program.' : 
+                            'This user has not engaged with the Bags fee claiming system.'}
                     </p>
                 </div>
             `;
@@ -552,7 +555,7 @@
             if (data.foundInTx) {
                 resultHtml += `
                     <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">
-                        💰 View Claim Transaction
+                        View Claim Transaction
                     </a>
                 `;
             }
@@ -567,7 +570,7 @@
                 `;
                 data.foundPrograms.slice(0, 5).forEach(program => {
                     const isFeeProgram = program === 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
-                    resultHtml += `${isFeeProgram ? '🎯 ' : '• '}${program.substring(0, 40)}...${isFeeProgram ? ' (Fee Program)' : ''}<br>`;
+                    resultHtml += `${isFeeProgram ? '• ' : '• '}${program.substring(0, 40)}...${isFeeProgram ? ' (Fee Program)' : ''}<br>`;
                 });
                 resultHtml += `
                         </div>
@@ -578,10 +581,10 @@
             resultHtml += `
                 <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
                     <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
-                        🔍 View on Solscan
+                        View on Solscan
                     </a>
                     <a href="https://bags.fm" target="_blank" class="link-btn">
-                        🎒 Visit Bags.fm
+                        Visit Bags.fm
                     </a>
                 </div>
             `;
