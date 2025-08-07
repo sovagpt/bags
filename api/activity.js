@@ -62,12 +62,58 @@ export default async function handler(req, res) {
       });
     }
     
+    // Helper function to extract token info from transaction
+    function extractTokenInfo(transaction, meta) {
+      try {
+        const accountKeys = transaction.message.accountKeys;
+        let tokenAddress = null;
+        
+        // Look for token mints in the account keys (excluding SOL and common programs)
+        const COMMON_PROGRAMS = [
+          'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi', // Fee program
+          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',     // Token program
+          'So11111111111111111111111111111111111111112',       // WSOL
+          '11111111111111111111111111111111',                  // System program
+          'ComputeBudget111111111111111111111111111111',       // Compute budget
+        ];
+        
+        // Find potential token mint addresses
+        for (const account of accountKeys) {
+          // Skip common programs and the user's wallet
+          if (!COMMON_PROGRAMS.includes(account) && account !== wallet) {
+            // Check if this looks like a token mint (44 characters, starts with certain patterns)
+            if (account.length === 44) {
+              tokenAddress = account;
+              console.log(`🎯 Found potential token address: ${tokenAddress}`);
+              break; // Use the first one we find
+            }
+          }
+        }
+        
+        return {
+          address: tokenAddress,
+          name: null, // We'll set this in frontend for now
+          amount: null, // We'll set this in frontend for now
+          usdValue: null // We'll set this in frontend for now
+        };
+      } catch (error) {
+        console.log('Error extracting token info:', error.message);
+        return {
+          address: null,
+          name: null,
+          amount: null,
+          usdValue: null
+        };
+      }
+    }
+    
     // Now check each transaction for balance changes and fee program involvement
     const signatures = signaturesData.result.slice(0, 50); // Limit to avoid timeouts
     let foundClaim = false;
     let claimTransaction = null;
     let checkedCount = 0;
     let suspiciousTransactions = [];
+    let tokenInfo = null;
     
     console.log(`🔍 Checking ${signatures.length} transactions for fee program interactions...`);
     
@@ -167,6 +213,10 @@ export default async function handler(req, res) {
           foundClaim = true;
           claimTransaction = sig.signature;
           
+          // Extract token information from this transaction
+          tokenInfo = extractTokenInfo(transaction, meta);
+          console.log(`🪙 Extracted token info:`, tokenInfo);
+          
           suspiciousTransactions.push({
             signature: sig.signature,
             hasPositiveBalanceChange,
@@ -198,7 +248,12 @@ export default async function handler(req, res) {
       foundInTx: claimTransaction,
       method: 'balance_changes_check',
       suspiciousTransactions: suspiciousTransactions.slice(0, 3), // Limit output
-      debugInfo: `Checked ${checkedCount} transactions for balance changes with fee program`
+      debugInfo: `Checked ${checkedCount} transactions for balance changes with fee program`,
+      // NEW: Token information
+      tokenAddress: tokenInfo?.address || null,
+      tokenName: tokenInfo?.name || null,
+      claimAmount: tokenInfo?.amount || null,
+      usdValue: tokenInfo?.usdValue || null
     });
     
   } catch (error) {
