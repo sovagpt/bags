@@ -69,43 +69,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // Helper function to get token info from Jupiter API
-    async function getTokenInfoFromJupiter(tokenAddress) {
-      try {
-        console.log(`🔍 Looking up token info for: ${tokenAddress}`);
-        
-        // Fetch Jupiter token list (cached for better performance)
-        const jupiterResponse = await fetch('https://token.jup.ag/strict');
-        if (!jupiterResponse.ok) {
-          throw new Error('Jupiter API failed');
-        }
-        
-        const tokens = await jupiterResponse.json();
-        const tokenInfo = tokens.find(token => token.address === tokenAddress);
-        
-        if (tokenInfo) {
-          console.log(`🎯 Found token in Jupiter: ${tokenInfo.symbol} (${tokenInfo.name})`);
-          return {
-            name: tokenInfo.symbol,
-            fullName: tokenInfo.name,
-            decimals: tokenInfo.decimals
-          };
-        } else {
-          console.log(`❌ Token not found in Jupiter list: ${tokenAddress}`);
-          return null;
-        }
-      } catch (error) {
-        console.log(`Error fetching from Jupiter: ${error.message}`);
-        return null;
-      }
-    }
-
     // Helper function to extract token info from transaction
     async function extractTokenInfo(transaction, meta) {
       try {
         const accountKeys = transaction.message.accountKeys;
         let tokenAddress = null;
-        let tokenName = 'UNKNOWN';
+        let tokenName = 'UNKNOWN'; // Default until Bags adds token metadata API
         
         const COMMON_PROGRAMS = [
           'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi', // Fee program
@@ -127,43 +96,14 @@ export default async function handler(req, res) {
             }
           }
         }
-        
-        // If we found a token address, get its name from Jupiter API
-        if (tokenAddress) {
-          const jupiterInfo = await getTokenInfoFromJupiter(tokenAddress);
-          if (jupiterInfo) {
-            tokenName = jupiterInfo.name;
-          } else {
-            // Fallback: try to extract from address as before
-            const addressWithoutBags = tokenAddress.slice(0, -4);
-            const upperCaseMatches = addressWithoutBags.match(/[A-Z]{2,6}/g);
-            if (upperCaseMatches && upperCaseMatches.length > 0) {
-              tokenName = upperCaseMatches[upperCaseMatches.length - 1];
-            } else {
-              tokenName = tokenAddress.substring(0, 3).toUpperCase();
-            }
-          }
 
-          // Get creator information
-          const creators = await getTokenCreators(tokenAddress);
-          
-          return {
-            address: tokenAddress,
-            name: tokenName,
-            creators: creators
-          };
-        }
-        
-        // If no BAGS token found, log all accounts for debugging
-        if (!tokenAddress) {
-          console.log(`🔍 No BAGS token found. All non-program accounts:`, 
-            accountKeys.filter(acc => !COMMON_PROGRAMS.includes(acc) && acc !== wallet));
-        }
+        // Get creator information
+        const creators = tokenAddress ? await getTokenCreators(tokenAddress) : null;
         
         return {
-          address: null,
-          name: 'UNKNOWN',
-          creators: null
+          address: tokenAddress,
+          name: tokenName, // Will always be "UNKNOWN" until Bags adds metadata API
+          creators: creators
         };
       } catch (error) {
         console.log('Error extracting token info:', error.message);
