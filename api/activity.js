@@ -1,4 +1,4 @@
-// /api/activity.js - Search fee program transactions for user wallet
+// /api/activity.js - Check balance changes for fee program interactions
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(`🔍 Searching fee program transactions for wallet: ${wallet}`);
+    console.log(`💰 Checking balance changes for wallet: ${wallet}`);
     
     const FEE_PROGRAM = 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
     
@@ -31,8 +31,8 @@ export default async function handler(req, res) {
     
     console.log(`Using RPC: ${rpcUrl.includes('helius') ? 'Helius' : 'Free Solana RPC'}`);
     
-    // 🎯 NEW APPROACH: Get transactions FROM the fee program (not user wallet)
-    console.log(`Getting fee program transactions...`);
+    // Get wallet's transaction signatures
+    console.log('Getting wallet transaction signatures...');
     
     const signaturesResponse = await fetch(rpcUrl, {
       method: 'POST',
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
         jsonrpc: '2.0',
         id: 1,
         method: 'getSignaturesForAddress',
-        params: [FEE_PROGRAM, { limit: 500 }] // Check recent 500 fee program transactions
+        params: [wallet, { limit: 100 }] // Check recent 100 user transactions
       })
     });
     
@@ -50,33 +50,35 @@ export default async function handler(req, res) {
     }
     
     const signaturesData = await signaturesResponse.json();
-    console.log(`📊 Got ${signaturesData?.result?.length || 0} fee program transactions`);
+    console.log(`📊 Got ${signaturesData?.result?.length || 0} wallet transactions`);
     
     if (!signaturesData?.result?.length) {
       return res.status(200).json({
         wallet: wallet,
         hasInteracted: false,
-        status: 'No fee program transactions found',
+        status: 'No transactions found for wallet',
         checkedTransactions: 0,
-        method: 'fee_program_search'
+        method: 'balance_changes_check'
       });
     }
     
-    // Check transactions for the user's wallet as signer
-    const signatures = signaturesData.result.slice(0, 100); // Check first 100 transactions
+    // Now check each transaction for balance changes and fee program involvement
+    const signatures = signaturesData.result.slice(0, 50); // Limit to avoid timeouts
     let foundClaim = false;
     let claimTransaction = null;
     let checkedCount = 0;
+    let suspiciousTransactions = [];
     
-    console.log(`🔍 Searching ${signatures.length} fee program transactions for wallet ${wallet}...`);
+    console.log(`🔍 Checking ${signatures.length} transactions for fee program interactions...`);
     
     for (let i = 0; i < signatures.length; i++) {
       const sig = signatures[i];
       checkedCount++;
       
       try {
-        console.log(`Checking fee tx ${i + 1}/${signatures.length}: ${sig.signature}`);
+        console.log(`Checking tx ${i + 1}/${signatures.length}: ${sig.signature}`);
         
+        // Get transaction with detailed info including pre/post balances
         const txResponse = await fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -84,12 +86,16 @@ export default async function handler(req, res) {
             jsonrpc: '2.0',
             id: 1,
             method: 'getTransaction',
-            params: [sig.signature, { encoding: 'json' }]
+            params: [sig.signature, { 
+              encoding: 'json',
+              maxSupportedTransactionVersion: 0 // Support newer transaction versions
+            }]
           })
         });
         
         if (!txResponse.ok) {
           console.log(`TX fetch failed: ${txResponse.status}`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Longer delay on error
           continue;
         }
         
@@ -100,33 +106,88 @@ export default async function handler(req, res) {
           continue;
         }
         
-        if (txData?.result?.transaction?.message?.accountKeys) {
-          const accountKeys = txData.result.transaction.message.accountKeys;
-          const firstAccount = accountKeys[0]; // Signer & fee payer
-          
-          // 🎯 CHECK: Is the searched wallet the signer of this fee program transaction?
-          if (firstAccount === wallet) {
-            console.log(`🎉 FOUND CLAIM! Wallet ${wallet} is signer in fee program tx: ${sig.signature}`);
-            foundClaim = true;
-            claimTransaction = sig.signature;
-            break; // Found it, no need to check more
-          } else {
-            console.log(`❌ Different signer: ${firstAccount.substring(0, 10)}... (not ${wallet.substring(0, 10)}...)`);
+        const transaction = txData?.result?.transaction;
+        const meta = txData?.result?.meta;
+        
+        if (!transaction || !meta) {
+          console.log(`No transaction data for ${sig.signature}`);
+          continue;
+        }
+        
+        // Check if wallet is signer & fee payer
+        const accountKeys = transaction.message.accountKeys;
+        const firstAccount = accountKeys[0]; // Signer & fee payer
+        
+        if (firstAccount !== wallet) {
+          console.log(`❌ Wallet ${wallet.substring(0, 10)}... is not signer in ${sig.signature}`);
+          continue;
+        }
+        
+        console.log(`✅ Wallet IS signer & fee payer in ${sig.signature}`);
+        
+        // Check if transaction involves fee program
+        let involvesFeeProgram = false;
+        
+        // Check account keys for fee program
+        if (accountKeys.includes(FEE_PROGRAM)) {
+          involvesFeeProgram = true;
+          console.log(`🎯 Fee program found in account keys!`);
+        }
+        
+        // Check instructions for fee program
+        if (!involvesFeeProgram && transaction.message.instructions) {
+          for (const instruction of transaction.message.instructions) {
+            if (instruction.programIdIndex < accountKeys.length) {
+              const programId = accountKeys[instruction.programIdIndex];
+              if (programId === FEE_PROGRAM) {
+                involvesFeeProgram = true;
+                console.log(`🎯 Fee program found in instructions!`);
+                break;
+              }
+            }
           }
         }
         
+        if (involvesFeeProgram) {
+          console.log(`🎉 FOUND FEE CLAIM! Wallet ${wallet} signed tx ${sig.signature} involving fee program`);
+          
+          // Check balance changes to confirm it's a claim (not just interaction)
+          const preBalances = meta.preBalances || [];
+          const postBalances = meta.postBalances || [];
+          
+          let hasPositiveBalanceChange = false;
+          for (let j = 0; j < Math.min(preBalances.length, postBalances.length); j++) {
+            const diff = postBalances[j] - preBalances[j];
+            if (diff > 0) {
+              hasPositiveBalanceChange = true;
+              console.log(`💰 Positive balance change detected: +${diff} lamports for account ${j}`);
+            }
+          }
+          
+          foundClaim = true;
+          claimTransaction = sig.signature;
+          
+          suspiciousTransactions.push({
+            signature: sig.signature,
+            hasPositiveBalanceChange,
+            involvesFeeProgram: true
+          });
+          
+          break; // Found what we need
+        }
+        
         // Small delay to avoid rate limits
-        if (i % 10 === 0 && i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        if (i % 5 === 0 && i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
         
       } catch (txError) {
-        console.log(`Error with fee tx ${sig.signature}: ${txError.message}`);
+        console.log(`Error with tx ${sig.signature}: ${txError.message}`);
         continue;
       }
     }
     
-    console.log(`✅ Search complete. Found claim: ${foundClaim}, Checked: ${checkedCount} transactions`);
+    console.log(`✅ Balance change check complete. Found claim: ${foundClaim}, Checked: ${checkedCount} transactions`);
     
     return res.status(200).json({
       wallet: wallet,
@@ -135,9 +196,9 @@ export default async function handler(req, res) {
       status: foundClaim ? 'Fee Claims Found!' : 'No Fee Claims Found',
       checkedTransactions: checkedCount,
       foundInTx: claimTransaction,
-      method: 'fee_program_search',
-      searchedFeeTransactions: signatures.length,
-      debugInfo: `Searched ${checkedCount} fee program transactions for wallet ${wallet}`
+      method: 'balance_changes_check',
+      suspiciousTransactions: suspiciousTransactions.slice(0, 3), // Limit output
+      debugInfo: `Checked ${checkedCount} transactions for balance changes with fee program`
     });
     
   } catch (error) {
@@ -146,10 +207,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       wallet: wallet,
       hasInteracted: false,
-      error: `Search failed: ${error.message}`,
+      error: `Check failed: ${error.message}`,
       status: 'Error occurred',
       checkedTransactions: 0,
-      method: 'fee_program_search'
+      method: 'balance_changes_check'
     });
   }
 }
