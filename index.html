@@ -646,109 +646,102 @@ body::before {
 
             /* CMD Modal Styling - Real Windows CMD Look */
 .cmd-modal {
-    background: #0c0c0c;
-    border: 1px solid #cccccc;
-    border-radius: 0; /* Remove rounded corners for authentic look */
+    background: #000000;
+    border: 2px solid #00d62b;
+    border-radius: 8px;
     max-width: 800px;
     width: 90%;
     padding: 0;
     overflow: hidden;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 20px rgba(0, 214, 43, 0.3);
 }
 
 .cmd-window {
-    background: #0c0c0c;
-    color: #cccccc;
-    font-family: 'Consolas', 'Courier New', monospace;
+    background: #000000;
+    color: #00d62b;
+    font-family: 'Courier New', 'Consolas', monospace;
     font-size: 14px;
-    line-height: 1.2;
+    line-height: 1.4;
 }
 
 .cmd-header {
-    background: linear-gradient(to bottom, #f0f0f0, #d0d0d0);
-    padding: 6px 8px;
+    background: #000000;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #999999;
-    min-height: 28px;
+    border-bottom: 1px solid #00d62b;
+    position: relative;
+}
+
+.cmd-logo {
+    width: 40px;
+    height: 40px;
+    margin-right: 16px;
+    border-radius: 4px;
 }
 
 .cmd-buttons {
     display: flex;
-    gap: 2px;
+    gap: 8px;
     margin-left: auto;
 }
 
 .cmd-btn {
-    width: 16px;
-    height: 14px;
-    border: 1px solid #999999;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #00d62b;
+    background: #000000;
+    color: #00d62b;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    color: #333333;
-    background: linear-gradient(to bottom, #f8f8f8, #e0e0e0);
+    font-size: 12px;
     cursor: pointer;
+    font-family: 'Courier New', monospace;
 }
-
-.cmd-btn.minimize::after { content: '_'; font-weight: bold; }
-.cmd-btn.maximize::after { content: '□'; font-weight: bold; }
-.cmd-btn.close::after { content: '×'; font-weight: bold; }
 
 .cmd-btn:hover {
-    background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
+    background: #00d62b;
+    color: #000000;
 }
 
-.cmd-btn.close:hover {
-    background: linear-gradient(to bottom, #ff6b6b, #ff4444);
-    color: white;
-}
+.cmd-btn.minimize::after { content: '_'; }
+.cmd-btn.maximize::after { content: '□'; }
+.cmd-btn.close::after { content: '×'; }
 
 .cmd-title {
-    color: #333333;
-    font-size: 11px;
-    font-weight: 400;
-    font-family: 'Segoe UI', sans-serif;
+    color: #00d62b;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
     flex: 1;
-    padding-left: 8px;
+    text-transform: uppercase;
 }
 
 .cmd-body {
-    padding: 8px 12px;
+    padding: 16px 20px;
     min-height: 450px;
-    background: #0c0c0c;
-    font-family: 'Consolas', 'Courier New', monospace;
+    background: #000000;
+    font-family: 'Courier New', 'Consolas', monospace;
 }
 
 #cmdOutput {
-    color: #cccccc;
+    color: #00d62b;
     white-space: pre-line;
     font-size: 13px;
+    font-family: 'Courier New', monospace;
 }
 
 .cmd-cursor {
-    color: #cccccc;
+    color: #00d62b;
     animation: blink 1s infinite;
     display: inline-block;
-    background: #cccccc;
-    width: 8px;
-    height: 16px;
-    margin-left: 2px;
+    font-family: 'Courier New', monospace;
 }
 
 @keyframes blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
-}
-
-/* Green text for specific lines */
-.cmd-success {
-    color: #00ff00 !important;
-}
-
-.cmd-prompt {
-    color: #cccccc;
 }
 
             .tooltip {
@@ -868,18 +861,20 @@ body::before {
 </div>
 
         <!-- About Modal -->
+<!-- About Modal -->
 <div class="modal-overlay" id="aboutModalOverlay">
     <div class="modal cmd-modal" id="aboutModal">
-        <button class="modal-close" onclick="closeAboutModal()">×</button>
+        <button class="modal-close" onclick="closeAboutModal()" style="background: #000000; color: #00d62b; border: 1px solid #00d62b;">×</button>
         <div id="aboutModalContent">
             <div class="cmd-window">
                 <div class="cmd-header">
+                    <img src="https://cdn.prod.website-files.com/6740d85c4e3daeef29a89470/6894605912fbf6897e6d47c1_f7a6dd87b49af8eee0a9ffbd139ecd75%20(1).png" alt="Terminal" class="cmd-logo">
+                    <div class="cmd-title">Bags Analytics Terminal</div>
                     <div class="cmd-buttons">
-                        <span class="cmd-btn close"></span>
                         <span class="cmd-btn minimize"></span>
                         <span class="cmd-btn maximize"></span>
+                        <span class="cmd-btn close" onclick="closeAboutModal()"></span>
                     </div>
-                    <div class="cmd-title">Command Prompt - Bags Analytics</div>
                 </div>
                 <div class="cmd-body">
                     <div id="cmdOutput"></div>
@@ -1417,45 +1412,46 @@ document.getElementById('aboutModalOverlay').addEventListener('click', function(
 function startCmdAnimation() {
     const output = document.getElementById('cmdOutput');
     const commands = [
-        'Microsoft Windows [Version 10.0.19041.1052]',
-        '(c) Microsoft Corporation. All rights reserved.',
+        'Bags Analytics Terminal v1.0.0-beta',
+        'Initializing connection to Solana mainnet-beta...',
+        'Loading Bags.fm API modules...',
+        'STATUS: ONLINE',
         '',
-        'C:\\Users\\dev> cd Bags\\Analytics',
-        '',
-        'C:\\Bags\\Analytics> whoami',
+        'root@bags-analytics:~$ whoami',
         'bags-fee-tracker',
         '',
-        'C:\\Bags\\Analytics> type mission.txt',
-        'Track developer behavior on Bags.fm',
-        'Expose LARPers and serial token farmers', 
-        'Give traders the edge with real data',
+        'root@bags-analytics:~$ cat /etc/mission.conf',
+        '# MISSION CONFIGURATION',
+        'TARGET: Track developer behavior on Bags.fm',
+        'OBJECTIVE: Expose LARPers and serial token farmers', 
+        'GOAL: Give traders the edge with real data',
         '',
-        'C:\\Bags\\Analytics> dir features',
-        ' Directory of C:\\Bags\\Analytics\\features',
+        'root@bags-analytics:~$ ls -la /features/',
+        'drwxr-xr-x  7 root root  4096 Aug  7 09:00 .',
+        'drwxr-xr-x  3 root root  4096 Aug  7 09:00 ..',
+        '-rwxr-xr-x  1 root root  2048 Aug  7 09:00 fee-claim-detector',
+        '-rwxr-xr-x  1 root root  1024 Aug  7 09:00 multi-token-analyzer',
+        '-rwxr-xr-x  1 root root  1536 Aug  7 09:00 creator-verifier', 
+        '-rw-r--r--  1 root root   512 Aug  7 09:00 larp-detector.pending',
+        '-rw-r--r--  1 root root   256 Aug  7 09:00 telegram-bot.pending',
         '',
-        '08/07/2025  09:00 AM    <DIR>          fee-claims',
-        '08/07/2025  09:00 AM    <DIR>          multi-token',
-        '08/07/2025  09:00 AM    <DIR>          verification', 
-        '08/07/2025  09:00 AM    <DIR>          larp-detector [COMING SOON]',
-        '08/07/2025  09:00 AM    <DIR>          telegram-bot [COMING SOON]',
-        '               0 File(s)              0 bytes',
-        '               5 Dir(s)   unlimited bytes free',
+        'root@bags-analytics:~$ cat /proc/stats',
+        'WALLETS_ANALYZED: 10,000+ daily',
+        'NETWORK: Solana mainnet-beta',
+        'API_STATUS: Connected to Bags.fm',
+        'AI_ENGINE: Claude (Anthropic)',
+        'UPTIME: 99.9%',
         '',
-        'C:\\Bags\\Analytics> type stats.txt',
-        'Analyzing 10,000+ wallet addresses daily',
-        'Connected to Solana mainnet-beta',
-        'Powered by Bags.fm API + Claude AI',
-        '',
-        'C:\\Bags\\Analytics> echo %CLAIMBAGS%',
+        'root@bags-analytics:~$ echo $CLAIMBAGS',
         '"Be ahead of the game"',
         '',
-        'C:\\Bags\\Analytics> help contact',
-        'Built by: @devclaimbags',
-        'Website: devclaimbags.fm',
-        'Version: 1.0.0-beta',
-        'Status: ONLINE',
+        'root@bags-analytics:~$ cat /etc/contact.info',
+        'DEVELOPER: @devclaimbags',
+        'WEBSITE: devclaimbags.fm',
+        'VERSION: 1.0.0-beta',
+        'SECURITY: All systems operational',
         '',
-        'C:\\Bags\\Analytics> _'
+        'root@bags-analytics:~$ █'
     ];
     
     let currentLine = 0;
@@ -1468,12 +1464,12 @@ function startCmdAnimation() {
             if (currentChar < line.length) {
                 output.innerHTML += line[currentChar];
                 currentChar++;
-                setTimeout(typeNextChar, 8); // Much faster - 8ms per character
+                setTimeout(typeNextChar, 15); // Fast typing
             } else {
                 output.innerHTML += '\n';
                 currentLine++;
                 currentChar = 0;
-                setTimeout(typeNextChar, currentLine < commands.length ? 50 : 0); // Shorter pause between lines
+                setTimeout(typeNextChar, currentLine < commands.length ? 100 : 0);
             }
         }
     }
