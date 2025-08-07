@@ -1113,11 +1113,65 @@ function showLarpModal() {
     
     setTimeout(() => {
         larpModalOverlay.classList.add('show');
+        
+        // After modal shows, add blur and coming soon overlay
+        setTimeout(() => {
+            showComingSoonOverlay();
+        }, 300); // Wait for modal animation to complete
     }, 10);
+}
+
+function showComingSoonOverlay() {
+    // Add blur to the modal content
+    const modal = document.getElementById('larpModal');
+    modal.style.filter = 'blur(3px)';
+    
+    // Create coming soon overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'comingSoonOverlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1002;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = 'https://cdn.prod.website-files.com/6740d85c4e3daeef29a89470/68945ba3ba8f48b22284d003_COMING-NEXT-07-08-2025.png';
+    img.alt = 'Coming Soon';
+    img.style.cssText = `
+        max-width: 400px;
+        width: 90%;
+        height: auto;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    `;
+    
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+    
+    // Fade in the coming soon image
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+    }, 100);
 }
 
 function closeLarpModal() {
     const larpModalOverlay = document.getElementById('larpModalOverlay');
+    const comingSoonOverlay = document.getElementById('comingSoonOverlay');
+    const modal = document.getElementById('larpModal');
+    
+    // Remove coming soon overlay if it exists
+    if (comingSoonOverlay) {
+        comingSoonOverlay.remove();
+    }
+    
+    // Remove blur
+    modal.style.filter = 'none';
+    
     larpModalOverlay.classList.remove('show');
     
     setTimeout(() => {
