@@ -258,39 +258,41 @@ body::before {
 
         /* Modal */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    overflow: hidden; /* Prevent scrolling */
+}
 
-        .modal-overlay.show {
-            opacity: 1;
-        }
+.modal-overlay.show {
+    opacity: 1;
+}
 
-        .modal {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 3rem;
-            max-width: 700px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            position: relative;
-            transform: scale(0.9) translateY(20px);
-            transition: transform 0.3s ease;
-        }
+.modal {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 3rem;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden; /* No horizontal scroll */
+    position: relative;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
 
         .modal-overlay.show .modal {
             transform: scale(1) translateY(0);
@@ -578,6 +580,114 @@ body::before {
             gap: 1rem;
         }
 
+        .cmd-modal {
+    background: #000000;
+    border: 1px solid #00d62b;
+    border-radius: 8px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh; /* Limit height */
+    padding: 0;
+    overflow: hidden; /* Prevent scrolling */
+    box-shadow: 0 0 20px rgba(0, 214, 43, 0.3);
+    position: relative;
+}
+
+.cmd-window {
+    background: #000000;
+    color: #00d62b;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.cmd-header {
+    background: #1a1a1a;
+    padding: 0;
+    border-bottom: 1px solid #00d62b;
+    flex-shrink: 0; /* Don't shrink */
+}
+
+.terminal-titlebar {
+    background: #1a1a1a;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    color: #00d62b;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.terminal-icon {
+    width: 20px; /* Smaller icon */
+    height: 20px;
+    margin-right: 10px;
+    border-radius: 2px;
+    object-fit: contain; /* Maintain aspect ratio */
+}
+
+.terminal-title {
+    flex: 1;
+    color: #00d62b;
+    font-weight: bold;
+}
+
+.cmd-body {
+    padding: 20px;
+    background: #000000;
+    font-family: 'Courier New', monospace;
+    color: #00d62b;
+    flex: 1; /* Take remaining space */
+    overflow-y: auto; /* Only vertical scroll if needed */
+    overflow-x: hidden; /* No horizontal scroll */
+}
+
+#cmdOutput {
+    color: #00d62b;
+    white-space: pre-line;
+    font-size: 13px; /* Slightly smaller font */
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+    word-wrap: break-word; /* Break long words */
+    max-width: 100%; /* Prevent horizontal overflow */
+}
+
+.cmd-cursor {
+    color: #00d62b;
+    animation: blink 1s infinite;
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .cmd-modal {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .cmd-body {
+        padding: 16px;
+    }
+    
+    #cmdOutput {
+        font-size: 12px;
+    }
+    
+    .terminal-icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
         .creator-avatar {
             width: 48px;
             height: 48px;
@@ -644,120 +754,7 @@ body::before {
                 width: 95%;
             }
 
-            /* CMD Modal Styling - Real Windows CMD Look */
-.cmd-modal {
-    background: #000000;
-    border: 1px solid #444444;
-    border-radius: 0;
-    max-width: 900px;
-    width: 95%;
-    padding: 0;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-}
-
-.cmd-window {
-    background: #000000;
-    color: #00d62b;
-    font-family: 'Ubuntu Mono', 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-.cmd-header {
-    background: #e6e6e6;
-    padding: 0;
-    display: block;
-    border-bottom: 1px solid #cccccc;
-}
-
-.terminal-menubar {
-    background: linear-gradient(to bottom, #f6f6f6, #e8e8e8);
-    border-bottom: 1px solid #cccccc;
-    padding: 4px 8px;
-    font-family: 'Ubuntu', sans-serif;
-    font-size: 12px;
-    display: flex;
-    gap: 16px;
-}
-
-.menu-item {
-    color: #333333;
-    padding: 4px 8px;
-    cursor: pointer;
-}
-
-.menu-item:hover {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.terminal-titlebar {
-    background: #2d2d2d;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    color: #ffffff;
-    font-family: 'Ubuntu', sans-serif;
-    font-size: 13px;
-}
-
-.terminal-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 12px;
-    border-radius: 2px;
-}
-
-.terminal-title {
-    flex: 1;
-    color: #ffffff;
-}
-
-.cmd-body {
-    padding: 16px;
-    min-height: 500px;
-    background: #000000;
-    font-family: 'Ubuntu Mono', 'Courier New', monospace;
-    color: #00d62b;
-}
-
-#cmdOutput {
-    color: #00d62b;
-    white-space: pre-line;
-    font-size: 14px;
-    font-family: 'Ubuntu Mono', 'Courier New', monospace;
-    line-height: 1.6;
-}
-
-.cmd-cursor {
-    color: #00d62b;
-    animation: blink 1s infinite;
-    display: inline-block;
-    font-family: 'Ubuntu Mono', 'Courier New', monospace;
-}
-
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
-.cmd-prompt {
-    color: #00ff00;
-    font-weight: bold;
-}
-
-.cmd-command {
-    color: #ffffff;
-}
-
-.cmd-output {
-    color: #00d62b;
-    margin-left: 0;
-}
-
-.cmd-comment {
-    color: #888888;
-}
+            
             .tooltip {
                 position: fixed;
                 top: 50%;
