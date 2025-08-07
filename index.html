@@ -245,12 +245,19 @@
             submitBtn.disabled = true;
 
             try {
-                // Try multiple possible endpoint URLs with different auth methods
+                // Try multiple possible endpoint URLs with different parameter styles
                 const possibleUrls = [
+                    // Query parameter style
                     `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
+                    // Path parameter style
+                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/${encodeURIComponent(twitterUserId)}`,
+                    // Different query param name
+                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitter_user_id=${encodeURIComponent(twitterUserId)}`,
+                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?userId=${encodeURIComponent(twitterUserId)}`,
+                    // POST request with body (maybe it's not GET?)
+                    `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet`,
+                    // Alternative domains
                     `https://api.bags.fm/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
-                    `https://bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`,
-                    `https://public-api.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`
                 ];
 
                 const authMethods = [
@@ -262,11 +269,12 @@
                 let response = null;
                 let data = null;
 
-                // Try each URL with each auth method
+                // Try each URL with each auth method and different HTTP methods
                 for (const url of possibleUrls) {
                     for (const authHeaders of authMethods) {
+                        // Try GET first
                         try {
-                            console.log(`Trying URL: ${url} with auth:`, Object.keys(authHeaders)[0]);
+                            console.log(`Trying GET ${url} with auth:`, Object.keys(authHeaders)[0]);
                             response = await fetch(url, {
                                 method: 'GET',
                                 headers: authHeaders
@@ -274,17 +282,37 @@
 
                             if (response.ok) {
                                 data = await response.json();
-                                console.log(`Success with URL: ${url} using ${Object.keys(authHeaders)[0]}`);
+                                console.log(`✅ Success with GET ${url} using ${Object.keys(authHeaders)[0]}`);
                                 break;
                             } else {
-                                console.log(`Failed with URL: ${url} - Status: ${response.status}`);
-                                const errorText = await response.text();
-                                console.log(`Error response: ${errorText.substring(0, 200)}`);
+                                console.log(`❌ GET failed: ${url} - Status: ${response.status}`);
                             }
                         } catch (error) {
-                            console.log(`Error with URL: ${url} - ${error.message}`);
-                            lastError = error;
-                            continue;
+                            console.log(`❌ GET error: ${url} - ${error.message}`);
+                        }
+
+                        // If GET failed and this is the base URL, try POST with body
+                        if (url.endsWith('/wallet') && !url.includes('?')) {
+                            try {
+                                console.log(`Trying POST ${url} with body`);
+                                response = await fetch(url, {
+                                    method: 'POST',
+                                    headers: {
+                                        ...authHeaders,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ twitterUserId: twitterUserId })
+                                });
+
+                                if (response.ok) {
+                                    data = await response.json();
+                                    console.log(`✅ Success with POST ${url}`);
+                                    break;
+                                }
+                            } catch (error) {
+                                console.log(`❌ POST error: ${url} - ${error.message}`);
+                                lastError = error;
+                            }
                         }
                     }
                     if (response && response.ok) break;
