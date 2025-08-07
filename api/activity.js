@@ -159,7 +159,8 @@ export default async function handler(req, res) {
         hasInteracted: false,
         status: 'No transactions found for wallet',
         checkedTransactions: 0,
-        method: 'balance_changes_check'
+        method: 'balance_changes_check',
+        claimMetrics: null
       });
     }
     
@@ -170,6 +171,7 @@ export default async function handler(req, res) {
     let checkedCount = 0;
     let suspiciousTransactions = [];
     let allTokenInfo = []; // Array to store all token claims
+    let claimTimestamps = []; // Store timestamps for timing analysis
     
     console.log(`🔍 Checking ${signatures.length} transactions for fee program interactions...`);
     
@@ -269,6 +271,11 @@ export default async function handler(req, res) {
           if (hasPositiveBalanceChange) {
             foundClaim = true;
             
+            // Store timestamp for timing analysis
+            if (sig.blockTime) {
+              claimTimestamps.push(sig.blockTime);
+            }
+            
             // Extract token information from this transaction (including creators)
             const tokenInfo = await extractTokenInfo(transaction, meta);
             console.log(`🪙 Extracted token info:`, tokenInfo);
@@ -314,6 +321,21 @@ export default async function handler(req, res) {
     
     console.log(`🎯 Unique claims after deduplication: ${uniqueClaims.length}`, uniqueClaims);
     
+    // Calculate timing metrics
+    let claimMetrics = null;
+    if (claimTimestamps.length > 0) {
+      const dates = claimTimestamps.map(timestamp => new Date(timestamp * 1000));
+      const firstClaim = new Date(Math.min(...dates));
+      const lastClaim = new Date(Math.max(...dates));
+      const daysSinceLastClaim = Math.floor((Date.now() - lastClaim.getTime()) / (1000 * 60 * 60 * 24));
+      
+      claimMetrics = {
+        firstClaimDate: firstClaim.toISOString(),
+        lastClaimDate: lastClaim.toISOString(),
+        daysSinceLastClaim: daysSinceLastClaim
+      };
+    }
+    
     // Get the primary claim (first unique one)
     const primaryClaim = uniqueClaims[0] || null;
     
@@ -334,7 +356,9 @@ export default async function handler(req, res) {
       allClaims: uniqueClaims,
       totalClaims: uniqueClaims.length,
       // User profile info - get from the first creator that matches the searched user
-      userProfile: uniqueClaims.length > 0 ? findUserProfile(uniqueClaims, wallet) : null
+      userProfile: uniqueClaims.length > 0 ? findUserProfile(uniqueClaims, wallet) : null,
+      // Timing metrics
+      claimMetrics: claimMetrics
     });
     
   } catch (error) {
@@ -346,7 +370,8 @@ export default async function handler(req, res) {
       error: `Check failed: ${error.message}`,
       status: 'Error occurred',
       checkedTransactions: 0,
-      method: 'balance_changes_check'
+      method: 'balance_changes_check',
+      claimMetrics: null
     });
   }
 }
