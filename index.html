@@ -203,10 +203,10 @@
             </div>
 
             <div class="form-group">
-                <label for="twitterUserId">Twitter User ID</label>
-                <input type="text" id="twitterUserId" placeholder="e.g., 62821796 (WinRAR)" required>
+                <label for="twitterUsername">Twitter Username</label>
+                <input type="text" id="twitterUsername" placeholder="e.g., WinRAR_RARLAB (without @)" required>
                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
-                    Need to find a Twitter User ID? Use <a href="https://randomtools.io/find-my-twitter-id/" target="_blank">randomtools.io</a>
+                    Enter the Twitter username without the @ symbol
                 </small>
             </div>
 
@@ -242,143 +242,45 @@
             submitBtn.disabled = true;
 
             try {
-                console.log(`Twitter User ID: ${twitterUserId}`);
+                console.log(`Twitter Username: ${cleanUsername}`);
                 
-                const baseUrl = 'https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter';
+                // Use the corrected parameter: twitterUsername instead of twitterUserId
+                const url = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUsername=${encodeURIComponent(cleanUsername)}`;
                 
-                // Try 1: Exact format from their docs (no query params)
-                console.log('\n=== Trying docs format (no query params) ===');
-                try {
-                    const response1 = await fetch(baseUrl, {
-                        method: 'GET',
-                        headers: {
-                            'x-api-key': apiKey
-                        }
-                    });
-                    
-                    console.log(`Docs format response: ${response1.status}`);
-                    const data1 = await response1.json();
-                    console.log(`Docs format data:`, data1);
-                    
-                    if (response1.ok && data1.success) {
-                        showResult(`
-                            <strong>✅ Success (Docs Format)!</strong><br><br>
-                            <strong>Note:</strong> API returned wallet without needing Twitter ID parameter<br>
-                            <strong>Wallet Address:</strong>
-                            <div class="wallet-display">${data1.response}</div>
-                            <button class="copy-btn" onclick="copyToClipboard('${data1.response}')">📋 Copy Wallet</button>
-                        `, 'success');
-                        return;
+                console.log(`Making request to: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey
                     }
-                } catch (e) {
-                    console.log(`Docs format error: ${e.message}`);
-                }
+                });
+
+                console.log(`Response status: ${response.status}`);
                 
-                // Try 2: Twitter ID in custom header
-                console.log('\n=== Trying Twitter ID in header ===');
-                try {
-                    const response2 = await fetch(baseUrl, {
-                        method: 'GET',
-                        headers: {
-                            'x-api-key': apiKey,
-                            'x-twitter-user-id': twitterUserId,
-                            'twitter-user-id': twitterUserId
-                        }
-                    });
+                const data = await response.json();
+                console.log(`Response data:`, data);
+
+                if (response.ok && data.success) {
+                    const walletAddress = data.response;
+                    showResult(`
+                        <strong>✅ Success!</strong><br><br>
+                        <strong>Twitter Username:</strong> @${cleanUsername}<br>
+                        <strong>Wallet Address:</strong>
+                        <div class="wallet-display">${walletAddress}</div>
+                        <button class="copy-btn" onclick="copyToClipboard('${walletAddress}')">📋 Copy Wallet</button>
+                    `, 'success');
+                } else {
+                    let errorMsg = data.error || 'Unknown error occurred';
                     
-                    console.log(`Header format response: ${response2.status}`);
-                    const data2 = await response2.json();
-                    console.log(`Header format data:`, data2);
-                    
-                    if (response2.ok && data2.success) {
-                        showResult(`
-                            <strong>✅ Success (Header Format)!</strong><br><br>
-                            <strong>Twitter User ID:</strong> ${twitterUserId}<br>
-                            <strong>Wallet Address:</strong>
-                            <div class="wallet-display">${data2.response}</div>
-                            <button class="copy-btn" onclick="copyToClipboard('${data2.response}')">📋 Copy Wallet</button>
-                        `, 'success');
-                        return;
+                    if (errorMsg.includes('not found') || response.status === 404) {
+                        errorMsg = `Twitter user @${cleanUsername} not found in Bags system. They may need to create a Bags account first.`;
+                    } else if (errorMsg.includes('API key')) {
+                        errorMsg = 'Invalid API key. Please check your key from the Bags developer dashboard.';
                     }
-                } catch (e) {
-                    console.log(`Header format error: ${e.message}`);
+                    
+                    showResult(`❌ Error: ${errorMsg}`, 'error');
                 }
-                
-                // Try 3: POST with body (even though docs say GET)
-                console.log('\n=== Trying POST with JSON body ===');
-                try {
-                    const response3 = await fetch(baseUrl, {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            twitterUserId: twitterUserId
-                        })
-                    });
-                    
-                    console.log(`POST format response: ${response3.status}`);
-                    const data3 = await response3.json();
-                    console.log(`POST format data:`, data3);
-                    
-                    if (response3.ok && data3.success) {
-                        showResult(`
-                            <strong>✅ Success (POST Format)!</strong><br><br>
-                            <strong>Twitter User ID:</strong> ${twitterUserId}<br>
-                            <strong>Wallet Address:</strong>
-                            <div class="wallet-display">${data3.response}</div>
-                            <button class="copy-btn" onclick="copyToClipboard('${data3.response}')">📋 Copy Wallet</button>
-                        `, 'success');
-                        return;
-                    }
-                } catch (e) {
-                    console.log(`POST format error: ${e.message}`);
-                }
-                
-                // Try 4: Original query param method (for comparison)
-                console.log('\n=== Trying original query param method ===');
-                const queryUrl = `${baseUrl}?twitterUserId=${encodeURIComponent(twitterUserId)}`;
-                try {
-                    const response4 = await fetch(queryUrl, {
-                        method: 'GET',
-                        headers: {
-                            'x-api-key': apiKey
-                        }
-                    });
-                    
-                    console.log(`Query param response: ${response4.status}`);
-                    const data4 = await response4.json();
-                    console.log(`Query param data:`, data4);
-                    
-                    if (response4.ok && data4.success) {
-                        showResult(`
-                            <strong>✅ Success (Query Params)!</strong><br><br>
-                            <strong>Twitter User ID:</strong> ${twitterUserId}<br>
-                            <strong>Wallet Address:</strong>
-                            <div class="wallet-display">${data4.response}</div>
-                            <button class="copy-btn" onclick="copyToClipboard('${data4.response}')">📋 Copy Wallet</button>
-                        `, 'success');
-                        return;
-                    }
-                } catch (e) {
-                    console.log(`Query param error: ${e.message}`);
-                }
-                
-                // If all fail
-                showResult(`
-                    <strong>❌ All Methods Failed</strong><br><br>
-                    <strong>Tried:</strong><br>
-                    1. Docs format (no params): Failed<br>
-                    2. Custom headers: Failed<br>
-                    3. POST with body: Failed<br>
-                    4. Query parameters: Failed<br><br>
-                    
-                    <strong>The API docs example has no query parameters,</strong><br>
-                    which suggests the endpoint might work differently than expected.<br><br>
-                    
-                    Check console for detailed responses from each method.
-                `, 'error');
             } catch (error) {
                 console.error('Network Error:', error);
                 
@@ -419,21 +321,21 @@
 
         // Auto-save form data
         const apiKeyInput = document.getElementById('apiKey');
-        const twitterUserIdInput = document.getElementById('twitterUserId');
+        const twitterUsernameInput = document.getElementById('twitterUsername');
 
         // Load saved data (but not API key for security)
-        if (localStorage.getItem('bags_twitter_id')) {
-            twitterUserIdInput.value = localStorage.getItem('bags_twitter_id');
+        if (localStorage.getItem('bags_twitter_username')) {
+            twitterUsernameInput.value = localStorage.getItem('bags_twitter_username');
         }
 
-        // Save data on input (Twitter ID only)
-        twitterUserIdInput.addEventListener('input', () => {
-            localStorage.setItem('bags_twitter_id', twitterUserIdInput.value);
+        // Save data on input (Twitter username only)
+        twitterUsernameInput.addEventListener('input', () => {
+            localStorage.setItem('bags_twitter_username', twitterUsernameInput.value);
         });
 
-        // Pre-fill WinRAR's ID for testing
-        if (!twitterUserIdInput.value) {
-            twitterUserIdInput.value = '62821796';
+        // Pre-fill WinRAR's username for testing
+        if (!twitterUsernameInput.value) {
+            twitterUsernameInput.value = 'WinRAR_RARLAB';
         }
     </script>
 </body>
