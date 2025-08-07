@@ -386,6 +386,25 @@
             margin-bottom: 1rem;
         }
 
+        .contract-address {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Monaco', 'Menlo', 'SF Mono', monospace;
+            font-size: 0.8rem;
+            color: #e5e5e5;
+            word-break: break-all;
+            border-left: 3px solid #7c77c6;
+        }
+
+        .contract-label {
+            color: #a0a0a0;
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
         .claim-amount {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -655,6 +674,7 @@
             const tokenName = 'XAI'; // This would come from your backend data
             const tokenAmount = '1.46242534'; // This would come from your backend data
             const usdValue = '$244.62'; // This would come from your backend data
+            const contractAddress = 'So11111111111111111111111111111111111111112'; // This would come from your backend data
             
             let modalHtml = `
                 <div class="claim-status">
@@ -676,6 +696,9 @@
                     <div class="token-info">
                         <div class="token-name">${tokenName}</div>
                         <div class="token-details">Token fees claimed</div>
+                        
+                        <div class="contract-label">Contract Address</div>
+                        <div class="contract-address">${contractAddress}</div>
                         
                         <div class="claim-amount">
                             <div class="amount-card">
@@ -714,8 +737,8 @@
                     <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
                         View on Solscan
                     </a>
-                    <a href="https://bags.fm" target="_blank" class="link-btn">
-                        Visit Bags.fm
+                    <a href="https://bags.fm/${contractAddress}" target="_blank" class="link-btn">
+                        View on Bags.fm
                     </a>
                 </div>
             `;
