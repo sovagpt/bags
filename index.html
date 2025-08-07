@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bags.fm Activity Tracker</title>
+    <title>Bags.fm Fee Claim Checker</title>
     <style>
         * {
             margin: 0;
@@ -121,12 +121,6 @@
             color: #721c24;
         }
 
-        .result.warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-        }
-
         .loading {
             display: none;
             text-align: center;
@@ -159,21 +153,21 @@
             font-size: 12px;
         }
 
-        .activity-grid {
+        .status-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin: 20px 0;
         }
 
-        .activity-card {
+        .status-card {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             border-left: 4px solid #667eea;
         }
 
-        .activity-card h4 {
+        .status-card h4 {
             color: #333;
             margin-bottom: 8px;
             font-size: 14px;
@@ -181,7 +175,7 @@
             align-items: center;
         }
 
-        .activity-card p {
+        .status-card p {
             color: #666;
             font-size: 13px;
             margin: 0;
@@ -196,10 +190,9 @@
         }
 
         .active { background: #28a745; }
-        .inactive { background: #6c757d; }
-        .moderate { background: #ffc107; }
+        .inactive { background: #dc3545; }
 
-        .solscan-link {
+        .link-btn {
             background: #007bff;
             color: white;
             padding: 8px 16px;
@@ -210,53 +203,41 @@
             margin-top: 10px;
         }
 
-        .solscan-link:hover {
+        .link-btn:hover {
             background: #0056b3;
-        }
-
-        .api-status {
-            background: #e9ecef;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #495057;
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎒 Bags.fm Activity Tracker</h1>
-            <p>Check if users are actively claiming their bag fees</p>
+            <h1>🎒 Bags Fee Claim Checker</h1>
+            <p>Check if users have claimed fees from Bags.fm</p>
         </div>
 
-        <div class="api-status">
-            <strong>🔐 Secure API:</strong> Using server-side authentication
-        </div>
-
-        <form id="trackerForm">
+        <form id="checkerForm">
             <div class="form-group">
                 <label for="twitterUsername">Twitter Username</label>
-                <input type="text" id="twitterUsername" placeholder="e.g., WinRAR_RARLAB (without @)" required value="WinRAR_RARLAB">
+                <input type="text" id="twitterUsername" placeholder="e.g., grokstation (without @)" required value="grokstation">
                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
-                    Enter Twitter username to check their bag fee claiming activity
+                    Enter Twitter username to check their fee claiming activity
                 </small>
             </div>
 
-            <button type="submit">🔍 Check Activity</button>
+            <button type="submit">🔍 Check Fee Claims</button>
         </form>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Checking wallet and activity...</p>
+            <p>Checking fee claims...</p>
         </div>
 
         <div class="result" id="result"></div>
     </div>
 
     <script>
-        document.getElementById('trackerForm').addEventListener('submit', async function(e) {
+        document.getElementById('checkerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const twitterUsername = document.getElementById('twitterUsername').value.trim();
@@ -276,9 +257,9 @@
             submitBtn.disabled = true;
 
             try {
-                console.log(`Checking activity for: ${cleanUsername}`);
+                console.log(`Checking: ${cleanUsername}`);
                 
-                // Step 1: Get wallet address via our serverless function
+                // Step 1: Get wallet address
                 const walletResponse = await fetch(`/api/wallet?username=${encodeURIComponent(cleanUsername)}`);
                 const walletData = await walletResponse.json();
 
@@ -290,96 +271,86 @@
                 const walletAddress = walletData.wallet;
                 console.log(`Found wallet: ${walletAddress}`);
 
-                // Step 2: Check wallet activity via Solscan API
+                // Step 2: Check fee program interactions
                 const activityResponse = await fetch(`/api/activity?wallet=${encodeURIComponent(walletAddress)}&username=${encodeURIComponent(cleanUsername)}`);
                 const activityData = await activityResponse.json();
 
-                console.log('Activity data:', activityData);
+                console.log('Backend response:', activityData);
 
-                displayActivityResults(cleanUsername, walletAddress, activityData);
+                displayResults(cleanUsername, walletAddress, activityData);
 
             } catch (error) {
-                console.error('Tracking error:', error);
-                showResult(`❌ Error checking activity: ${error.message}`, 'error');
+                console.error('Check error:', error);
+                showResult(`❌ Error: ${error.message}`, 'error');
             } finally {
                 loadingEl.style.display = 'none';
                 submitBtn.disabled = false;
             }
         });
 
-        function displayActivityResults(username, walletAddress, activity) {
-            const activityLevel = determineActivityLevel(activity);
-            const statusDot = activityLevel === 'high' ? 'active' : activityLevel === 'medium' ? 'moderate' : 'inactive';
-            const statusText = activityLevel === 'high' ? 'Highly Active' : activityLevel === 'medium' ? 'Moderately Active' : 'Low Activity';
+        function displayResults(username, walletAddress, data) {
+            // Use the exact property from backend response
+            const hasClaimed = data.hasInteracted === true;
+            const resultType = hasClaimed ? 'success' : 'error';
+            const statusDot = hasClaimed ? 'active' : 'inactive';
             
-            const resultType = activityLevel === 'high' ? 'success' : activityLevel === 'medium' ? 'warning' : 'error';
-
-            // Build claim details if available
-            let claimDetailsHtml = '';
-            if (activity.claimDetails && activity.claimDetails.length > 0) {
-                claimDetailsHtml = '<br><strong>Recent Fee Claims:</strong><br>';
-                activity.claimDetails.forEach(claim => {
-                    const date = new Date(claim.timestamp).toLocaleDateString();
-                    claimDetailsHtml += `• ${date}: ${claim.solAmount} SOL (${claim.usdValue?.toFixed(2) || '0'}) via ${claim.program}<br>`;
-                });
-            }
-
-            showResult(`
-                <strong>✅ Fee Claim Analysis Complete!</strong><br><br>
+            let resultHtml = `
+                <strong>🎯 Fee Claim Check Results</strong><br><br>
                 
                 <strong>User:</strong> @${username}<br>
                 <strong>Wallet:</strong>
                 <div class="wallet-display">${walletAddress}</div>
                 
-                <div class="activity-grid">
-                    <div class="activity-card">
-                        <h4><span class="status-dot ${statusDot}"></span>Claim Activity</h4>
-                        <p>${statusText}</p>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <h4><span class="status-dot ${statusDot}"></span>Fee Claims</h4>
+                        <p>${hasClaimed ? 'HAS claimed fees' : 'NO fee claims found'}</p>
                     </div>
-                    <div class="activity-card">
-                        <h4>💰 Current Balance</h4>
-                        <p>${activity.balance} SOL</p>
+                    <div class="status-card">
+                        <h4>📊 Status</h4>
+                        <p>${data.status || (hasClaimed ? 'Active Claimer' : 'Inactive')}</p>
                     </div>
-                    <div class="activity-card">
-                        <h4>🎯 Actual Fee Claims</h4>
-                        <p>${activity.actualFeeClaims || 0} verified claims</p>
+                    <div class="status-card">
+                        <h4>🔍 Checked</h4>
+                        <p>${data.checkedTransactions || 0} transactions</p>
                     </div>
-                    <div class="activity-card">
-                        <h4>💸 Total Claimed</h4>
-                        <p>${activity.totalClaimedSOL || '0.00'} SOL</p>
-                    </div>
-                    <div class="activity-card">
-                        <h4>💵 USD Value</h4>
-                        <p>${activity.totalClaimedUSD || '0.00'}</p>
-                    </div>
-                    <div class="activity-card">
-                        <h4>📊 Avg Claim Size</h4>
-                        <p>${activity.avgClaimSize || '0.00'} SOL</p>
+                    <div class="status-card">
+                        <h4>🎯 Programs</h4>
+                        <p>${data.foundPrograms?.length || 0} found</p>
                     </div>
                 </div>
                 
-                <strong>Fee Claiming Status:</strong> ${activity.actualFeeClaims > 0 ? '🟢 Actively claiming fees from their tokens' : '🔴 No verified fee claims detected'}<br>
-                ${activity.lastClaim ? `<strong>Last Claim:</strong> ${new Date(activity.lastClaim).toLocaleDateString()}<br>` : ''}
-                
-                ${claimDetailsHtml}
-                
-                <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="solscan-link">
-                    🔍 View on Solscan
+                <strong>🎯 Result:</strong> ${hasClaimed ? 
+                    '🟢 This user HAS interacted with the Bags fee program!' : 
+                    '🔴 This user has NOT interacted with the Bags fee program'}<br>
+            `;
+            
+            // Add transaction link if found
+            if (data.foundInTx) {
+                resultHtml += `<br><strong>💰 Fee claim transaction:</strong> <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">View Transaction</a><br>`;
+            }
+            
+            // Add debug info
+            if (data.foundPrograms && data.foundPrograms.length > 0) {
+                resultHtml += `<br><small><strong>Programs found:</strong><br>`;
+                data.foundPrograms.slice(0, 5).forEach(program => {
+                    const isFeeProgram = program === 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
+                    resultHtml += `${isFeeProgram ? '🎯 ' : '• '}${program.substring(0, 30)}...${isFeeProgram ? ' ← FEE PROGRAM!' : ''}<br>`;
+                });
+                resultHtml += `</small>`;
+            }
+            
+            resultHtml += `
+                <br>
+                <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
+                    🔍 View Wallet on Solscan
                 </a>
                 
                 <br><br>
-                <small><strong>Analysis:</strong> This checks for actual "Claim fees" transactions from Meteora/Raydium programs, not random transfers. Only verified fee claims are counted.</small>
-            `, resultType);
-        }
+                <small><strong>Method:</strong> Free Solana RPC check for program interactions</small>
+            `;
 
-        function determineActivityLevel(activity) {
-            if (activity.actualFeeClaims >= 3 && parseFloat(activity.totalClaimedSOL) >= 2.0) {
-                return 'high';
-            } else if (activity.actualFeeClaims >= 1 && parseFloat(activity.totalClaimedSOL) >= 0.5) {
-                return 'medium';
-            } else {
-                return 'low';
-            }
+            showResult(resultHtml, resultType);
         }
 
         function showResult(message, type) {
