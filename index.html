@@ -217,8 +217,8 @@
     </div>
 
     <script>
-        // Get API key from environment variable (set in Vercel)
-        const API_KEY = '%BAGS_API_KEY%'; // This will be replaced by your build process
+        // For production: set your API key here, or use environment variables with a build step
+        const API_KEY = 'bags_prod_DSfYkGka2rlPuntXpTKcON0hOLQj5eBIxuNH9HTHPbM';
 
         document.getElementById('walletForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -234,8 +234,8 @@
             }
 
             // Check if API key is available
-            if (!API_KEY || API_KEY === '%BAGS_API_KEY%') {
-                showResult('❌ API key not configured. Please set BAGS_API_KEY environment variable in Vercel.', 'error');
+            if (!API_KEY) {
+                showResult('❌ API key not configured.', 'error');
                 return;
             }
 
