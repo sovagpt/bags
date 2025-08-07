@@ -25,13 +25,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Make the request to bags.fm API from the server
-    const bagsUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet?twitterUserId=${encodeURIComponent(twitterUserId)}`;
+    // CORRECTED ENDPOINT PATH from Bags support!
+    const bagsUrl = `https://public-api-v2.bags.fm/api/v1/token-launch/fee-share/wallet/twitter?twitterUserId=${encodeURIComponent(twitterUserId)}`;
     
     const response = await fetch(bagsUrl, {
       method: 'GET',
       headers: {
-        'x-api-key': process.env.BAGS_API_KEY || 'bags_prod_DSfYkGka2rlPuntXpTKcON0hOLQj5eBIxuNH9HTHPbM'
+        'x-api-key': process.env.BAGS_API_KEY || 'YOUR_API_KEY_HERE'  // Don't commit real key
       }
     });
 
