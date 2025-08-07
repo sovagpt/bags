@@ -1,4 +1,4 @@
-// /api/activity.js - Check balance changes for fee program interactions
+// /api/activity.js - Check balance changes for feel program interactions
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
