@@ -669,11 +669,11 @@
             const hasClaimed = data.hasInteracted === true;
             const resultType = hasClaimed ? 'success' : 'error';
             
-            // Use real data from backend, with fallbacks
-            const tokenName = data.tokenName || 'XAI'; // Fallback to XAI for now
-            const tokenAmount = data.claimAmount || '1.46242534'; // Fallback amount
-            const usdValue = data.usdValue || '$244.62'; // Fallback USD value
-            const contractAddress = data.tokenAddress || 'So11111111111111111111111111111111111111112'; // Use real address from backend
+            // Use real data from backend - no more hardcoded fallbacks
+            const tokenName = data.tokenName || 'UNKNOWN';
+            const tokenAmount = data.claimAmount || '0';
+            const usdValue = data.usdValue ? `${data.usdValue}` : 'N/A';
+            const contractAddress = data.tokenAddress || 'Not found';
             
             let modalHtml = `
                 <div class="claim-status">
