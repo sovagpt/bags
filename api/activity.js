@@ -77,17 +77,22 @@ export default async function handler(req, res) {
           'ComputeBudget111111111111111111111111111111',       // Compute budget
         ];
         
-        // Find potential token mint addresses
+        // Find Bags token addresses (they all end with "BAGS")
         for (const account of accountKeys) {
           // Skip common programs and the user's wallet
           if (!COMMON_PROGRAMS.includes(account) && account !== wallet) {
-            // Check if this looks like a token mint (44 characters, starts with certain patterns)
-            if (account.length === 44) {
+            // Check if this is a Bags token (44 characters, ends with "BAGS")
+            if (account.length === 44 && account.endsWith('BAGS')) {
               tokenAddress = account;
-              console.log(`🎯 Found potential token address: ${tokenAddress}`);
+              console.log(`🎯 Found Bags token address: ${tokenAddress}`);
               break; // Use the first one we find
             }
           }
+        }
+        
+        // If no BAGS token found, log all accounts for debugging
+        if (!tokenAddress) {
+          console.log(`🔍 No BAGS token found. All accounts in transaction:`, accountKeys.filter(acc => !COMMON_PROGRAMS.includes(acc) && acc !== wallet));
         }
         
         return {
