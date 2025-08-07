@@ -219,7 +219,7 @@ export default async function handler(req, res) {
             foundClaim = true;
             
             // Extract token information from this transaction
-            const tokenInfo = extractTokenInfo(transaction, meta);
+            const tokenInfo = await extractTokenInfo(transaction, meta);
             console.log(`🪙 Extracted token info:`, tokenInfo);
             
             if (tokenInfo.address) {
