@@ -305,10 +305,6 @@
             background: rgba(124, 119, 198, 0.8);
         }
 
-        .modal-overlay.show .modal {
-            transform: scale(1) translateY(0);
-        }
-
         .modal::before {
             content: '';
             position: absolute;
@@ -653,6 +649,64 @@
             }
         }
     </style>
+    <body>
+    <div class="header">
+        <nav class="nav">
+            <div class="logo">
+                <img src="https://cdn.prod.website-files.com/6740d85c4e3daeef29a89470/689437c7dfaa854544093c3d_688eec4a9dc2bb9ca5c7bcdb_bags-icon%20(1).png" alt="Bags" style="height: 24px; width: auto; margin-right: 8px; vertical-align: middle;">
+                Bags Analytics
+            </div>
+            <div class="nav-links">
+                <a href="#" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link">Analytics</a>
+                <a href="#" class="nav-link">API</a>
+            </div>
+        </nav>
+
+        <div class="hero">
+            <h1>Did Dev Claim Bags</h1>
+            <p>Advanced analytics for Bags.fm fee distribution tracking. Monitor user engagement and claiming patterns in real-time.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <form id="checkerForm">
+                <div class="form-group">
+                    <label for="twitterUsername">Twitter Username Analysis</label>
+                    <div class="input-container">
+                        <input type="text" id="twitterUsername" placeholder="Enter username (e.g., grokstation)" required value="grokstation">
+                    </div>
+                    <div class="input-hint">
+                        Enter a Twitter username to analyze their Bags fee claiming activity
+                    </div>
+                </div>
+
+                <button type="submit">
+                    <span>Analyze Fee Claims</span>
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing blockchain data...</p>
+            </div>
+
+            <div class="result" id="result"></div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Powered by Bags.fm API & Solscan</p>
+    </div>
 </head>
 <script>
         // Tab switching function
@@ -706,6 +760,7 @@
 
                 console.log('Backend response:', activityData);
                 console.log('All claims data:', activityData.allClaims);
+                console.log('User profile:', activityData.userProfile);
 
                 displayResults(cleanUsername, walletAddress, activityData);
 
