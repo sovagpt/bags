@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bags.fm Fee Claim Checker</title>
+    <title>Bags Fee Claim Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,87 +13,205 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f23;
+            color: #ffffff;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            max-width: 600px;
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            z-index: -1;
+            animation: float 8s ease-in-out infinite;
         }
 
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(1deg); }
+        }
+
+        /* Header */
         .header {
+            padding: 2rem 0;
             text-align: center;
-            margin-bottom: 30px;
+            position: relative;
         }
 
-        .header h1 {
-            color: #333;
-            font-size: 28px;
-            margin-bottom: 10px;
+        .nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
             font-weight: 700;
+            color: #7c77c6;
+            margin-right: auto;
         }
 
-        .header p {
-            color: #666;
-            font-size: 16px;
+        .nav-links {
+            display: flex;
+            gap: 2rem;
         }
 
+        .nav-link {
+            color: #a0a0a0;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: #ffffff;
+        }
+
+        /* Hero section */
+        .hero {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 4rem;
+            padding: 0 2rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff, #7c77c6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #a0a0a0;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        }
+
+        /* Form styling */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 2rem;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 0.75rem;
+            color: #ffffff;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 0.95rem;
+        }
+
+        .input-container {
+            position: relative;
         }
 
         input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 16px;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: #ffffff;
+            font-size: 1rem;
             transition: all 0.3s ease;
-            background: #f8f9fa;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: #666666;
         }
 
         input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            border-color: #7c77c6;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 4px rgba(124, 119, 198, 0.1);
+        }
+
+        .input-hint {
+            color: #888888;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
         }
 
         button {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #7c77c6, #a855f7);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 16px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        button:hover::before {
+            left: 100%;
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 20px 40px rgba(124, 119, 198, 0.4);
         }
 
         button:disabled {
@@ -101,40 +220,25 @@
             transform: none;
         }
 
-        .result {
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-            font-size: 14px;
-            display: none;
+        button:disabled:hover::before {
+            left: -100%;
         }
 
-        .result.success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-
-        .result.error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
+        /* Loading state */
         .loading {
             display: none;
             text-align: center;
-            margin: 20px 0;
+            margin: 2rem 0;
         }
 
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 1rem;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #7c77c6;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
         }
 
         @keyframes spin {
@@ -142,42 +246,88 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Results */
+        .result {
+            margin-top: 2rem;
+            padding: 2rem;
+            border-radius: 16px;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .result.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #ffffff;
+        }
+
+        .result.success::before {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .result.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ffffff;
+        }
+
+        .result.error::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
         .wallet-display {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border-left: 4px solid #7c77c6;
+            font-family: 'Monaco', 'Menlo', 'SF Mono', monospace;
+            font-size: 0.875rem;
             word-break: break-all;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            border-left: 4px solid #667eea;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 12px;
+            color: #e5e5e5;
         }
 
         .status-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
         }
 
         .status-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border-left: 4px solid #7c77c6;
+            transition: transform 0.2s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-2px);
         }
 
         .status-card h4 {
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 14px;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
+            font-weight: 600;
         }
 
         .status-card p {
-            color: #666;
-            font-size: 13px;
+            color: #a0a0a0;
+            font-size: 0.875rem;
             margin: 0;
         }
 
@@ -185,55 +335,119 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            margin-right: 8px;
+            margin-right: 0.5rem;
             display: inline-block;
         }
 
-        .active { background: #28a745; }
-        .inactive { background: #dc3545; }
+        .active { 
+            background: #22c55e; 
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+        }
+        
+        .inactive { 
+            background: #ef4444; 
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+        }
 
         .link-btn {
-            background: #007bff;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
             text-decoration: none;
-            font-size: 12px;
-            display: inline-block;
-            margin-top: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            backdrop-filter: blur(10px);
         }
 
         .link-btn:hover {
-            background: #0056b3;
-            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            color: #ffffff;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem 2rem;
+            color: #666666;
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .card {
+                padding: 2rem;
+                margin: 0 1rem;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎒 Bags Fee Claim Checker</h1>
-            <p>Check if users have claimed fees from Bags.fm</p>
-        </div>
+    <div class="header">
+        <nav class="nav">
+            <div class="logo">🎒 Bags Analytics</div>
+            <div class="nav-links">
+                <a href="#" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link">Analytics</a>
+                <a href="#" class="nav-link">API</a>
+            </div>
+        </nav>
 
-        <form id="checkerForm">
-            <div class="form-group">
-                <label for="twitterUsername">Twitter Username</label>
-                <input type="text" id="twitterUsername" placeholder="e.g., grokstation (without @)" required value="grokstation">
-                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
-                    Enter Twitter username to check their fee claiming activity
-                </small>
+        <div class="hero">
+            <h1>Fee Claim Intelligence</h1>
+            <p>Advanced analytics for Bags.fm fee distribution tracking. Monitor user engagement and claiming patterns in real-time.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <form id="checkerForm">
+                <div class="form-group">
+                    <label for="twitterUsername">Twitter Username Analysis</label>
+                    <div class="input-container">
+                        <input type="text" id="twitterUsername" placeholder="Enter username (e.g., grokstation)" required value="grokstation">
+                    </div>
+                    <div class="input-hint">
+                        Enter a Twitter username to analyze their Bags fee claiming activity
+                    </div>
+                </div>
+
+                <button type="submit">
+                    <span>🔍 Analyze Fee Claims</span>
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing blockchain data...</p>
             </div>
 
-            <button type="submit">🔍 Check Fee Claims</button>
-        </form>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Checking fee claims...</p>
+            <div class="result" id="result"></div>
         </div>
+    </div>
 
-        <div class="result" id="result"></div>
+    <div class="footer">
+        <p>Powered by Solana blockchain analytics • Built with precision</p>
     </div>
 
     <script>
@@ -281,7 +495,7 @@
 
             } catch (error) {
                 console.error('Check error:', error);
-                showResult(`❌ Error: ${error.message}`, 'error');
+                showResult(`❌ Analysis failed: ${error.message}`, 'error');
             } finally {
                 loadingEl.style.display = 'none';
                 submitBtn.disabled = false;
@@ -295,59 +509,81 @@
             const statusDot = hasClaimed ? 'active' : 'inactive';
             
             let resultHtml = `
-                <strong>🎯 Fee Claim Check Results</strong><br><br>
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="color: #ffffff; margin-bottom: 0.5rem; font-size: 1.25rem;">Analysis Results</h3>
+                    <div style="color: #a0a0a0; font-size: 0.9rem;">@${username} • Fee claiming analysis complete</div>
+                </div>
                 
-                <strong>User:</strong> @${username}<br>
-                <strong>Wallet:</strong>
-                <div class="wallet-display">${walletAddress}</div>
+                <div style="margin: 1.5rem 0;">
+                    <strong style="color: #ffffff;">Wallet Address:</strong>
+                    <div class="wallet-display">${walletAddress}</div>
+                </div>
                 
                 <div class="status-grid">
                     <div class="status-card">
-                        <h4><span class="status-dot ${statusDot}"></span>Fee Claims</h4>
-                        <p>${hasClaimed ? 'HAS claimed fees' : 'NO fee claims found'}</p>
+                        <h4><span class="status-dot ${statusDot}"></span>Fee Claims Status</h4>
+                        <p>${hasClaimed ? 'Active fee claimer' : 'No claiming activity detected'}</p>
                     </div>
                     <div class="status-card">
-                        <h4>📊 Status</h4>
-                        <p>${data.status || (hasClaimed ? 'Active Claimer' : 'Inactive')}</p>
+                        <h4>📊 Analysis Status</h4>
+                        <p>${data.status || (hasClaimed ? 'Claims verified' : 'No activity found')}</p>
                     </div>
                     <div class="status-card">
-                        <h4>🔍 Checked</h4>
-                        <p>${data.checkedTransactions || 0} transactions</p>
+                        <h4>🔍 Transactions Analyzed</h4>
+                        <p>${data.checkedTransactions || 0} recent transactions</p>
                     </div>
                     <div class="status-card">
-                        <h4>🎯 Programs</h4>
-                        <p>${data.foundPrograms?.length || 0} found</p>
+                        <h4>🎯 Program Interactions</h4>
+                        <p>${data.foundPrograms?.length || 0} program(s) detected</p>
                     </div>
                 </div>
                 
-                <strong>🎯 Result:</strong> ${hasClaimed ? 
-                    '🟢 This user HAS interacted with the Bags fee program!' : 
-                    '🔴 This user has NOT interacted with the Bags fee program'}<br>
+                <div style="margin: 1.5rem 0; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                    <strong style="color: #ffffff;">Summary:</strong>
+                    <p style="margin-top: 0.5rem; color: #e5e5e5;">
+                        ${hasClaimed ? 
+                            '🟢 This user has successfully interacted with the Bags fee distribution program.' : 
+                            '🔴 This user has not engaged with the Bags fee claiming system.'}
+                    </p>
+                </div>
             `;
             
             // Add transaction link if found
             if (data.foundInTx) {
-                resultHtml += `<br><strong>💰 Fee claim transaction:</strong> <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">View Transaction</a><br>`;
+                resultHtml += `
+                    <a href="https://solscan.io/tx/${data.foundInTx}" target="_blank" class="link-btn">
+                        💰 View Claim Transaction
+                    </a>
+                `;
             }
             
             // Add debug info
             if (data.foundPrograms && data.foundPrograms.length > 0) {
-                resultHtml += `<br><small><strong>Programs found:</strong><br>`;
+                resultHtml += `
+                    <details style="margin-top: 1rem; color: #a0a0a0; font-size: 0.875rem;">
+                        <summary style="cursor: pointer; color: #ffffff; font-weight: 500;">Technical Details</summary>
+                        <div style="margin-top: 0.5rem; padding: 0.5rem 0;">
+                            <strong>Detected Programs:</strong><br>
+                `;
                 data.foundPrograms.slice(0, 5).forEach(program => {
                     const isFeeProgram = program === 'FEEhPbKVKnco9EXnaY3i4R5rQVUx91wgVfu8qokixywi';
-                    resultHtml += `${isFeeProgram ? '🎯 ' : '• '}${program.substring(0, 30)}...${isFeeProgram ? ' ← FEE PROGRAM!' : ''}<br>`;
+                    resultHtml += `${isFeeProgram ? '🎯 ' : '• '}${program.substring(0, 40)}...${isFeeProgram ? ' (Fee Program)' : ''}<br>`;
                 });
-                resultHtml += `</small>`;
+                resultHtml += `
+                        </div>
+                    </details>
+                `;
             }
             
             resultHtml += `
-                <br>
-                <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
-                    🔍 View Wallet on Solscan
-                </a>
-                
-                <br><br>
-                <small><strong>Method:</strong> Free Solana RPC check for program interactions</small>
+                <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <a href="https://solscan.io/account/${walletAddress}" target="_blank" class="link-btn">
+                        🔍 View on Solscan
+                    </a>
+                    <a href="https://bags.fm" target="_blank" class="link-btn">
+                        🎒 Visit Bags.fm
+                    </a>
+                </div>
             `;
 
             showResult(resultHtml, resultType);
@@ -360,15 +596,16 @@
             resultEl.style.display = 'block';
         }
 
-        // Auto-save username
+        // Auto-save username (using memory instead of localStorage for Claude.ai compatibility)
+        let savedUsername = 'grokstation';
         const usernameInput = document.getElementById('twitterUsername');
 
-        if (localStorage.getItem('bags_username')) {
-            usernameInput.value = localStorage.getItem('bags_username');
+        if (savedUsername) {
+            usernameInput.value = savedUsername;
         }
 
         usernameInput.addEventListener('input', () => {
-            localStorage.setItem('bags_username', usernameInput.value);
+            savedUsername = usernameInput.value;
         });
     </script>
 </body>
